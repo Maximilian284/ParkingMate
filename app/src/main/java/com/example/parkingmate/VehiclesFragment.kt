@@ -1,59 +1,58 @@
 package com.example.parkingmate
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.example.parkingmate.data.AppDatabase
+import com.example.parkingmate.viewmodel.ParkMateViewModel
+import com.example.parkingmate.viewmodel.ParkMateViewModelFactory
+import kotlinx.coroutines.launch
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [VehiclesFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class VehiclesFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
+    // 1. Inizializziamo il nostro ViewModel "Condiviso"
+    // Usiamo 'activityViewModels' così i dati sono uguali per tutti i Fragment dell'app
+    private val viewModel: ParkMateViewModel by activityViewModels {
+        // Creiamo la connessione al Database per passarla alla Factory
+        val db = AppDatabase.getDatabase(requireContext().applicationContext)
+        ParkMateViewModelFactory(db.appDao())
     }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
+        // Collega l'XML del layout
         return inflater.inflate(R.layout.fragment_vehicles, container, false)
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment VehiclesFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            VehiclesFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // 2. OSSERVIAMO I DATI DAL VIEWMODEL
+        // Questo è il modo moderno (2026) per leggere i dati: si aggiornano da soli!
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+
+                // Mettiamoci in ascolto della lista dei veicoli
+                viewModel.vehiclesList.collect { veicoli ->
+                    Log.d("ParkMateTest", "Numero di veicoli nel DB: ${veicoli.size}")
+                    veicoli.forEach { veicolo ->
+                        Log.d("ParkMateTest", "Ho trovato: ${veicolo.name} (${veicolo.type})")
+                    }
                 }
             }
+        }
+
+        // 3. TESTIAMO L'INSERIMENTO (Solo per prova, poi lo collegheremo a un bottone)
+        // De-commenta la riga sotto per provare ad aggiungere un veicolo ogni volta che apri la schermata
+        // viewModel.addVehicle("La mia Bici", "Bicycle")
     }
 }
