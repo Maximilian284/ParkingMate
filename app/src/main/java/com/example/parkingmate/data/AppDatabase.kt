@@ -18,11 +18,15 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "parkmate_db"
-                ).build()
+                    "parkmate_database" // o "parkmate_db" a seconda di come lo avevi chiamato
+                )
+                    .fallbackToDestructiveMigration() // <--- AGGIUNGI QUESTA RIGA QUI!
+                    .build()
                 INSTANCE = instance
                 instance
             }
         }
+
+
     }
 }

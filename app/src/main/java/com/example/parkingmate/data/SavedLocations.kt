@@ -7,6 +7,8 @@ import androidx.room.PrimaryKey
 data class SavedLocation(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val latitude: Double,
-    val longitude: Double
+    val latitude: Double, // Per ora mettiamo 0.0 quando salviamo, poi integreremo la mappa
+    val longitude: Double,
+    val defaultType: String = "Libero", // Libero, Orario, Fisso
+    val notes: String? = null
 )
