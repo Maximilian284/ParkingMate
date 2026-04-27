@@ -37,4 +37,10 @@ class ParkMateViewModel(private val dao: AppDao) : ViewModel() {
             dao.deleteVehicle(vehicle)
         }
     }
+
+    fun updateVehicle(vehicle: Vehicle) {
+        viewModelScope.launch {
+            dao.updateVehicle(vehicle)
+        }
+    }
 }

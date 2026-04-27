@@ -11,6 +11,9 @@ interface AppDao {
     @Query("SELECT * FROM vehicles")
     fun getAllVehicles(): Flow<List<Vehicle>>
 
+    @Update
+    suspend fun updateVehicle(vehicle: Vehicle)
+
     @Delete
     suspend fun deleteVehicle(vehicle: Vehicle)
 

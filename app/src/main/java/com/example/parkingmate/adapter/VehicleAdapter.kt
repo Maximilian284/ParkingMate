@@ -11,6 +11,7 @@ import com.example.parkingmate.data.Vehicle
 
 class VehicleAdapter(
     private var vehicles: List<Vehicle>,
+    private val onEditClick: (Vehicle) -> Unit, // <--- Nuovo!
     private val onDeleteClick: (Vehicle) -> Unit
 ) : RecyclerView.Adapter<VehicleAdapter.VehicleViewHolder>() {
 
@@ -29,7 +30,11 @@ class VehicleAdapter(
         val vehicle = vehicles[position]
         holder.tvName.text = vehicle.name
         holder.tvType.text = vehicle.type
+
+        // Cliccare il cestino elimina
         holder.btnDelete.setOnClickListener { onDeleteClick(vehicle) }
+        // Cliccare la card apre la modifica
+        holder.itemView.setOnClickListener { onEditClick(vehicle) }
     }
 
     override fun getItemCount() = vehicles.size
