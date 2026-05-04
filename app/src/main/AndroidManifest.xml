@@ -27,10 +27,8 @@
             </intent-filter>
         </activity>
 
-        <!-- AGGIUNGI QUESTA RIGA QUI (È una chiave finta temporanea per non farlo crashare) -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSy_Mettiamo_La_Chiave_Vera_Dopo" />
-
+            android:value="AIzaSyBkjd2SoUQCcx6bxqDjWcqDDiZl_Lm_s9w" />
     </application>
 </manifest>

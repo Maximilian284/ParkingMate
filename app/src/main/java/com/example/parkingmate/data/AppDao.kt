@@ -20,6 +20,12 @@ interface AppDao {
     @Insert
     suspend fun insertLocation(location: SavedLocation)
 
+    @Update
+    suspend fun updateLocation(location: SavedLocation)
+
+    @Delete
+    suspend fun deleteLocation(location: SavedLocation)
+
     @Query("SELECT * FROM saved_locations")
     fun getAllLocations(): Flow<List<SavedLocation>>
 

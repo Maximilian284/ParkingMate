@@ -132,6 +132,7 @@
                     android:layout_height="wrap_content"
                     android:hint="Fisso Iniziale €">
                     <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCostInitial"
                         android:inputType="numberDecimal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"/>
@@ -144,6 +145,7 @@
                     android:layout_marginHorizontal="8dp"
                     android:hint="Costo/Ora €">
                     <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCostHourly"
                         android:inputType="numberDecimal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"/>
@@ -155,6 +157,7 @@
                     android:layout_height="wrap_content"
                     android:hint="Max €">
                     <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCostMax"
                         android:inputType="numberDecimal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"/>
@@ -199,6 +202,7 @@
                 android:layout_marginTop="16dp"
                 android:hint="Note aggiuntive">
                 <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etNotes"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:lines="3" />
@@ -216,6 +220,16 @@
         </LinearLayout>
     </ScrollView>
 
+    <Button
+        android:id="@+id/btnDeleteLocation"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:text="Elimina"
+        android:textColor="#FF0000"
+        android:visibility="gone" />
+
     <!-- BOTTONE SALVA FINALE -->
     <Button
         android:id="@+id/btnSaveEverything"
@@ -223,6 +237,6 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:padding="12dp"
-        android:text="SALVA" />
+        android:text="Salva" />
 
 </LinearLayout>

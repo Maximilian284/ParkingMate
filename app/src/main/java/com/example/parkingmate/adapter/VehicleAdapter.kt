@@ -11,14 +11,14 @@ import com.example.parkingmate.data.Vehicle
 
 class VehicleAdapter(
     private var vehicles: List<Vehicle>,
-    private val onEditClick: (Vehicle) -> Unit, // <--- Nuovo!
-    private val onDeleteClick: (Vehicle) -> Unit
+    private val onItemClick: (Vehicle) -> Unit, // <--- Per il click sulla Card
+    private val onEditClick: (Vehicle) -> Unit   // <--- Per il click sulla Matita
 ) : RecyclerView.Adapter<VehicleAdapter.VehicleViewHolder>() {
 
     class VehicleViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvName: TextView = view.findViewById(R.id.tvVehicleName)
         val tvType: TextView = view.findViewById(R.id.tvVehicleType)
-        val btnDelete: ImageButton = view.findViewById(R.id.btnDelete)
+        val btnEdit: ImageButton = view.findViewById(R.id.btnEdit) // Assicurati che l'id nel layout sia btnEdit
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VehicleViewHolder {
@@ -31,10 +31,11 @@ class VehicleAdapter(
         holder.tvName.text = vehicle.name
         holder.tvType.text = vehicle.type
 
-        // Cliccare il cestino elimina
-        holder.btnDelete.setOnClickListener { onDeleteClick(vehicle) }
-        // Cliccare la card apre la modifica
-        holder.itemView.setOnClickListener { onEditClick(vehicle) }
+        // Click sulla MATITA (Modifica)
+        holder.btnEdit.setOnClickListener { onEditClick(vehicle) }
+
+        // Click sull'INTERA CARD (Parcheggia)
+        holder.itemView.setOnClickListener { onItemClick(vehicle) }
     }
 
     override fun getItemCount() = vehicles.size

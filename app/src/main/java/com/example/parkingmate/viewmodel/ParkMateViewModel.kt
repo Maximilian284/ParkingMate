@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.parkingmate.data.AppDao
 import com.example.parkingmate.data.Vehicle
+import com.example.parkingmate.data.SavedLocation
+import com.example.parkingmate.data.ParkingSession
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -41,6 +43,53 @@ class ParkMateViewModel(private val dao: AppDao) : ViewModel() {
     fun updateVehicle(vehicle: Vehicle) {
         viewModelScope.launch {
             dao.updateVehicle(vehicle)
+        }
+    }
+
+    // --- SALVATAGGIO LUOGO PREFERITO ---
+    fun addSavedLocation(name: String, lat: Double, lng: Double, type: String, notes: String?) {
+        viewModelScope.launch {
+            val location = SavedLocation(name = name, latitude = lat, longitude = lng, defaultType = type, notes = notes)
+            dao.insertLocation(location)
+        }
+    }
+
+    // --- SALVATAGGIO PARCHEGGIO (E COSTI) ---
+    // (Per ora salviamo il costo iniziale base, poi per calcolare il totale servirà un calcolo matematico)
+    fun addParkingSession(vehicleId: Int, type: String, lat: Double, lng: Double, notes: String?, photoPath: String?, initialCost: Double) {
+        viewModelScope.launch {
+            val session = ParkingSession(
+                vehicleId = vehicleId,
+                type = type,
+                startTime = System.currentTimeMillis(), // Orario di ORA
+                latitude = lat,
+                longitude = lng,
+                note = notes,
+                photoPath = photoPath,
+                cost = initialCost,
+                isActive = true // È un parcheggio attivo!
+            )
+            dao.insertSession(session)
+        }
+    }
+
+    val savedLocationsList: StateFlow<List<SavedLocation>> = dao.getAllLocations()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun removeSavedLocation(location: SavedLocation) {
+        viewModelScope.launch {
+            dao.deleteLocation(location)
+        }
+    }
+
+    fun updateSavedLocation(id: Int, name: String, lat: Double, lng: Double, type: String, notes: String?) {
+        viewModelScope.launch {
+            val location = SavedLocation(id = id, name = name, latitude = lat, longitude = lng, defaultType = type, notes = notes)
+            dao.updateLocation(location)
         }
     }
 }

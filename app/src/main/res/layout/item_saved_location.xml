@@ -16,10 +16,10 @@
         android:gravity="center_vertical">
 
         <ImageView
-            android:id="@+id/ivVehicleIcon"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@android:drawable/ic_menu_directions" />
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@android:drawable/btn_star_big_on"
+            app:tint="?attr/colorPrimary" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -29,28 +29,28 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/tvVehicleName"
+                android:id="@+id/tvLocationName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Nome Veicolo"
+                android:text="Nome Luogo"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/tvVehicleType"
+                android:id="@+id/tvLocationType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Tipo (Auto/Moto)"
+                android:text="Tipo tariffa"
                 android:textColor="#666666" />
         </LinearLayout>
 
         <ImageButton
-            android:id="@+id/btnEdit"
+            android:id="@+id/btnEditLocation"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_edit"
-            />
+            app:tint="#FF0000" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

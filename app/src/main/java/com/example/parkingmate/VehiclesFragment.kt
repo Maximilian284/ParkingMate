@@ -3,6 +3,7 @@ package com.example.parkingmate
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.Button
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import androidx.fragment.app.Fragment
@@ -44,11 +45,24 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
 
     private fun setupRecyclerView(view: View) {
         val rv = view.findViewById<RecyclerView>(R.id.rvVehicles)
+
         adapter = VehicleAdapter(
             vehicles = emptyList(),
-            onEditClick = { vehicle -> showVehicleDialog(vehicle) }, // Modifica
-            onDeleteClick = { vehicle -> viewModel.removeVehicle(vehicle) } // Elimina
+            // --- 1. CLICK SULLA CARD (Associazione Veicolo -> Luogo) ---
+            onItemClick = { vehicle ->
+                val form = AddParkingFragment()
+                val b = Bundle()
+                b.putInt("preselected_vehicle_id", vehicle.id)
+                b.putString("preselected_vehicle_name", "${vehicle.name} (${vehicle.type})")
+                b.putBoolean("is_vehicle_locked", true) // Messaggio per il form: blocca il veicolo!
+                form.arguments = b
+                form.show(childFragmentManager, "AddParkingDialog")
+            },
+            onEditClick = { vehicle ->
+                showVehicleDialog(vehicle)
+            }
         )
+
         rv.layoutManager = LinearLayoutManager(requireContext())
         rv.adapter = adapter
     }
@@ -122,6 +136,17 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
             }
             .setNegativeButton("Annulla", null)
             .show()
+
+        val btnDelete = dialogView.findViewById<Button>(R.id.btnDeleteVehicle)
+
+        if (vehicleToEdit != null) {
+            btnDelete.visibility = View.VISIBLE
+            btnDelete.setOnClickListener {
+                viewModel.removeVehicle(vehicleToEdit)
+                // Chiudiamo il dialog (dovrai salvare il riferimento al dialog creato con .show())
+                // dialog.dismiss()
+            }
+        }
     }
 
     // --- POPUP FILTRI ---
