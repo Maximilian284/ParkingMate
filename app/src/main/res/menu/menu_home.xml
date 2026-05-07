@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <!-- Pulsante 1: Switch Mappa / Lista -->
+    <item
+        android:id="@+id/action_toggle_view"
+        android:icon="@android:drawable/ic_dialog_map"
+        android:title="Vista"
+        app:showAsAction="always" />
+    <!-- Pulsante 2: Switch Storico / Attivi -->
+    <item
+        android:id="@+id/action_toggle_history"
+        android:icon="@android:drawable/ic_menu_recent_history"
+        android:title="Storico"
+        app:showAsAction="always" />
+</menu>

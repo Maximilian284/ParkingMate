@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
@@ -91,88 +92,219 @@ class AddParkingFragment : DialogFragment() {
 
         view.findViewById<MaterialToolbar>(R.id.toolbarAddParking).setNavigationOnClickListener { dismiss() }
 
+        // --- 1. RECUPERO STATI E BUNDLE ---
+        val isVehicleLocked = arguments?.getBoolean("is_vehicle_locked", false) ?: false
+        val isEditMode = arguments?.getBoolean("is_edit_mode", false) ?: false
+        // Se c'è un location_id e NON siamo in modalità modifica, significa che stiamo parcheggiando da un Luogo (è bloccato)
+        val isLocationLocked = arguments?.containsKey("location_id") == true && !isEditMode
+        editingLocationId = arguments?.getInt("location_id", -1)?.takeIf { it != -1 }
+
+        // --- 2. COLLEGAMENTO UI ---
+        val toggleGroup = view.findViewById<MaterialButtonToggleGroup>(R.id.toggleGroupAction)
+        val cbHeart = view.findViewById<CheckBox>(R.id.cbSaveAsFavorite)
+        val layoutHourlyCosts = view.findViewById<LinearLayout>(R.id.layoutHourlyCosts)
+
+        // Campi Luogo
+        val tilLocationInput = view.findViewById<View>(R.id.tilLocationName)
+        val etLocationName = view.findViewById<TextInputEditText>(R.id.etLocationName)
+        val tvDisplayLocation = view.findViewById<TextView>(R.id.tvDisplayLocationName)
+        val tilSelectExistingLocation = view.findViewById<View>(R.id.tilSelectExistingLocation)
+        val actvSelectLocation = view.findViewById<AutoCompleteTextView>(R.id.actvSelectLocation)
+
+        // Campi Veicolo
+        val layoutVehicle = view.findViewById<LinearLayout>(R.id.layoutVehicleSelection)
+        val tilSelectVehicle = view.findViewById<View>(R.id.tilSelectVehicle)
+        val actvVehicle = view.findViewById<AutoCompleteTextView>(R.id.actvSelectVehicle)
+        val tvDisplayVehicle = view.findViewById<TextView>(R.id.tvDisplayVehicle)
+
+        // Campi Tipo
+        val tilParkingType = view.findViewById<View>(R.id.tilParkingType)
+        val actvParkingType = view.findViewById<AutoCompleteTextView>(R.id.actvParkingType)
+        val tvDisplayParkingType = view.findViewById<TextView>(R.id.tvDisplayParkingType)
+
+        // Bottoni vari
+        val btnGetLocation = view.findViewById<Button>(R.id.btnGetLocation)
+        val btnDeleteLoc = view.findViewById<Button>(R.id.btnDeleteLocation)
+        val btnSaveEverything = view.findViewById<Button>(R.id.btnSaveEverything)
+        val cardMap = view.findViewById<View>(R.id.cardMap)
+
+        // --- 3. INIZIALIZZAZIONE MAPPA E GPS ---
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
         mapView = view.findViewById(R.id.mapViewMini)
         mapView.onCreate(savedInstanceState)
+
+        selectedLatitude = arguments?.getDouble("lat", 0.0) ?: 0.0
+        selectedLongitude = arguments?.getDouble("lng", 0.0) ?: 0.0
+
         mapView.getMapAsync { map ->
             googleMap = map
-
-            // Se abbiamo già delle coordinate (stiamo modificando), centra la mappa lì!
             if (selectedLatitude != 0.0 && selectedLongitude != 0.0) {
                 val latLng = LatLng(selectedLatitude, selectedLongitude)
                 googleMap?.addMarker(MarkerOptions().position(latLng).title("Luogo salvato"))
                 googleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
             }
 
-            googleMap?.setOnMapClickListener { latLng ->
-                googleMap?.clear()
-                googleMap?.addMarker(MarkerOptions().position(latLng).title("Parcheggio qui"))
-                selectedLatitude = latLng.latitude
-                selectedLongitude = latLng.longitude
+            if (!isLocationLocked) {
+                googleMap?.setOnMapClickListener { latLng ->
+                    googleMap?.clear()
+                    googleMap?.addMarker(MarkerOptions().position(latLng).title("Parcheggio qui"))
+                    selectedLatitude = latLng.latitude
+                    selectedLongitude = latLng.longitude
+                }
+            } else {
+                googleMap?.uiSettings?.setAllGesturesEnabled(false) // Blocca tocco se il luogo è fisso
             }
         }
 
-        view.findViewById<Button>(R.id.btnGetLocation).setOnClickListener {
+        btnGetLocation.setOnClickListener {
             locationPermissionRequest.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         }
 
-        // --- BOTTONE FOTOCAMERA ---
         view.findViewById<Button>(R.id.btnAddPhoto).setOnClickListener {
-            takePictureLauncher.launch(null) // Apre la fotocamera!
+            takePictureLauncher.launch(null)
         }
 
-        val toggleGroup = view.findViewById<MaterialButtonToggleGroup>(R.id.toggleGroupAction)
-        val layoutVehicle = view.findViewById<LinearLayout>(R.id.layoutVehicleSelection)
-        val cbHeart = view.findViewById<CheckBox>(R.id.cbSaveAsFavorite)
-        val layoutHourlyCosts = view.findViewById<LinearLayout>(R.id.layoutHourlyCosts)
-
-        toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isChecked) {
-                val isParking = (checkedId == R.id.btnParkVehicle)
-                layoutVehicle.visibility = if (isParking) View.VISIBLE else View.GONE
-                cbHeart.visibility = if (isParking) View.VISIBLE else View.GONE
-            }
-        }
-
-        val actvParkingType = view.findViewById<AutoCompleteTextView>(R.id.actvParkingType)
+        // --- 4. LOGICA BASE MENU A TENDINA E TOGGLE ---
         val parkingTypes = arrayOf("Gratis", "All'ora", "Già Pagato / Fisso")
         actvParkingType.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, parkingTypes))
         actvParkingType.setOnItemClickListener { _, _, position, _ ->
             layoutHourlyCosts.visibility = if (parkingTypes[position] == "All'ora") View.VISIBLE else View.GONE
         }
 
-        val actvVehicle = view.findViewById<AutoCompleteTextView>(R.id.actvSelectVehicle)
+        toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked && !isVehicleLocked && !isLocationLocked) {
+                val isParking = (checkedId == R.id.btnParkVehicle)
+                layoutVehicle.visibility = if (isParking) View.VISIBLE else View.GONE
+                cbHeart.visibility = if (isParking) View.VISIBLE else View.GONE
+            }
+        }
+
+        // --- 5. LA MAGIA: GESTIONE DEGLI STATI DINAMICI (SENZA CAMPI GRIGI) ---
+
+        // Referenze per nascondere i campi
+        val tilNotes = view.findViewById<View>(R.id.tilNotes)
+        val btnAddPhoto = view.findViewById<Button>(R.id.btnAddPhoto)
+
+        if (isVehicleLocked || isLocationLocked || isEditMode) {
+            // Niente opzioni "Solo preferito/Parcheggia", stiamo facendo un'azione specifica.
+            toggleGroup.visibility = View.GONE
+            cbHeart.visibility = View.GONE
+            if (!isEditMode) layoutVehicle.visibility = View.VISIBLE
+        }
+
+        if (isEditMode) {
+            // MODALITÀ MODIFICA LUOGO -> Niente Toggle, mostro Elimina
+            btnDeleteLoc.visibility = View.VISIBLE
+            btnDeleteLoc.setOnClickListener {
+                editingLocationId?.let { id ->
+                    viewModel.removeSavedLocation(com.example.parkingmate.data.SavedLocation(id = id, name = "", latitude = 0.0, longitude = 0.0))
+                    Toast.makeText(requireContext(), "Luogo Eliminato", Toast.LENGTH_SHORT).show()
+                    dismiss()
+                }
+            }
+
+            // Pre-compilazione campi
+            etLocationName.setText(arguments?.getString("name", ""))
+            view.findViewById<TextInputEditText>(R.id.etNotes).setText(arguments?.getString("notes", ""))
+            actvParkingType.setText(arguments?.getString("type", ""), false)
+            if (arguments?.getString("type") == "All'ora") layoutHourlyCosts.visibility = View.VISIBLE
+        }
+
+        if (isVehicleLocked) {
+            // ARRIVO DA TAB VEICOLI -> ASSOCIAZIONE LUOGO
+            tilSelectVehicle.visibility = View.GONE
+            tvDisplayVehicle.visibility = View.VISIBLE
+            tvDisplayVehicle.text = "Veicolo: " + arguments?.getString("preselected_vehicle_name")
+
+            tilLocationInput.visibility = View.GONE
+            tilSelectExistingLocation.visibility = View.VISIBLE
+            cardMap.visibility = View.GONE
+
+            // INIZIALMENTE NASCONDIAMO TUTTO FINCHÉ NON SCEGLIE IL LUOGO
+            tilParkingType.visibility = View.GONE
+            tilNotes.visibility = View.GONE
+            btnAddPhoto.visibility = View.GONE
+            btnSaveEverything.visibility = View.GONE // Nascondiamo anche Salva!
+
+            viewLifecycleOwner.lifecycleScope.launch {
+                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.savedLocationsList.collect { locations ->
+                        val names = locations.map { it.name }
+                        actvSelectLocation.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names))
+
+                        actvSelectLocation.setOnItemClickListener { _, _, pos, _ ->
+                            val loc = locations[pos]
+                            selectedLatitude = loc.latitude
+                            selectedLongitude = loc.longitude
+
+                            // AUTO-COMPILAZIONE DEI DATI DEL LUOGO SCELTO
+                            actvParkingType.setText(loc.defaultType, false)
+                            view.findViewById<TextInputEditText>(R.id.etNotes).setText(loc.notes ?: "")
+
+                            // ORA FACCIAMO APPARIRE I CAMPI PER FARLI VEDERE/MODIFICARE
+                            tilParkingType.visibility = View.VISIBLE
+                            tilNotes.visibility = View.VISIBLE
+                            btnAddPhoto.visibility = View.VISIBLE
+                            btnSaveEverything.visibility = View.VISIBLE
+
+                            layoutHourlyCosts.visibility = if (loc.defaultType == "All'ora") View.VISIBLE else View.GONE
+                        }
+                    }
+                }
+            }
+        }
+
+        if (isLocationLocked) {
+            // ARRIVO DA TAB LUOGHI -> ASSOCIAZIONE VEICOLO
+            tilLocationInput.visibility = View.GONE
+            tvDisplayLocation.visibility = View.VISIBLE
+            tvDisplayLocation.text = "Luogo: " + arguments?.getString("name")
+            btnGetLocation.visibility = View.GONE
+
+            tilParkingType.visibility = View.GONE
+            tvDisplayParkingType.visibility = View.VISIBLE
+            val tType = arguments?.getString("type") ?: "Gratis"
+            tvDisplayParkingType.text = "Tariffa: $tType"
+            if (tType == "All'ora") layoutHourlyCosts.visibility = View.VISIBLE
+        }
+
+        // --- 6. CARICAMENTO VEICOLI ---
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.vehiclesList.collect { vehicles ->
-                    currentVehicles = vehicles // Salviamo la lista per usarla nel salvataggio
+                    currentVehicles = vehicles
                     val vehicleNames = vehicles.map { "${it.name} (${it.type})" }.toMutableList()
                     actvVehicle.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, vehicleNames))
                 }
             }
         }
 
-        // --- IL GRANDE BOTTONE SALVA ---
-        view.findViewById<Button>(R.id.btnSaveEverything).setOnClickListener {
-            val isParkMode = toggleGroup.checkedButtonId == R.id.btnParkVehicle
-            val name = view.findViewById<TextInputEditText>(R.id.etLocationName).text.toString()
-            val type = actvParkingType.text.toString()
+        // --- 7. TASTO SALVA FINALE ---
+        btnSaveEverything.setOnClickListener {
+            // Se non c'è il toggle (perché nascosto), stiamo parcheggiando tranne nel caso della modifica!
+            val isParkMode = isVehicleLocked || isLocationLocked || (toggleGroup.visibility == View.VISIBLE && toggleGroup.checkedButtonId == R.id.btnParkVehicle)
+
+            val name = when {
+                isVehicleLocked -> actvSelectLocation.text.toString()
+                isLocationLocked -> arguments?.getString("name") ?: ""
+                else -> etLocationName.text.toString()
+            }
+
+            val type = actvParkingType.text.toString().takeIf { it.isNotEmpty() } ?: arguments?.getString("type") ?: "Gratis"
             val notes = view.findViewById<TextInputEditText>(R.id.etNotes).text.toString()
 
-            // Validazione base
             if (name.isEmpty() || type.isEmpty()) {
-                Toast.makeText(requireContext(), "Compila almeno Nome e Tipo di Tariffa!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Compila Nome e Tipo di Tariffa!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            if (selectedLatitude == 0.0) {
+            if (selectedLatitude == 0.0 && !isVehicleLocked) {
                 Toast.makeText(requireContext(), "Seleziona una posizione sulla mappa!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             if (isParkMode) {
-                // PARCHEGGIA VEICOLO
-                val selectedVehicleName = actvVehicle.text.toString()
-                // Troviamo il veicolo corrispondente nella lista
+                // PARCHEGGIO
+                val selectedVehicleName = if (isVehicleLocked) arguments?.getString("preselected_vehicle_name") else actvVehicle.text.toString()
                 val vehicle = currentVehicles.find { "${it.name} (${it.type})" == selectedVehicleName }
 
                 if (vehicle == null) {
@@ -180,21 +312,19 @@ class AddParkingFragment : DialogFragment() {
                     return@setOnClickListener
                 }
 
-                // Leggiamo il costo iniziale (se c'è)
                 val costStr = view.findViewById<TextInputEditText>(R.id.etCostInitial).text.toString()
                 val initialCost = if (costStr.isNotEmpty()) costStr.toDouble() else 0.0
 
-                // 1. Salva nel database (Parcheggi attivi)
                 viewModel.addParkingSession(vehicle.id, type, selectedLatitude, selectedLongitude, notes, savedPhotoPath, initialCost)
 
-                // 2. Se il cuoricino è premuto, salvalo anche nei luoghi!
-                if (cbHeart.isChecked) {
+                if (cbHeart.isChecked && cbHeart.visibility == View.VISIBLE) {
                     viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes)
                 }
                 Toast.makeText(requireContext(), "Parcheggio Avviato!", Toast.LENGTH_SHORT).show()
 
-            }  else {
-                if (editingLocationId != null) {
+            } else {
+                // SALVATAGGIO / MODIFICA LUOGO
+                if (isEditMode && editingLocationId != null) {
                     viewModel.updateSavedLocation(editingLocationId!!, name, selectedLatitude, selectedLongitude, type, notes)
                     Toast.makeText(requireContext(), "Luogo Modificato!", Toast.LENGTH_SHORT).show()
                 } else {
@@ -202,61 +332,7 @@ class AddParkingFragment : DialogFragment() {
                     Toast.makeText(requireContext(), "Luogo Salvato!", Toast.LENGTH_SHORT).show()
                 }
             }
-
-            dismiss() // Chiude la pagina dopo aver salvato!
-        }
-
-        // --- AUTO-COMPILAZIONE SE STIAMO MODIFICANDO ---
-        arguments?.let { bundle ->
-            editingLocationId = bundle.getInt("location_id")
-            val name = bundle.getString("name", "")
-            val type = bundle.getString("type", "")
-            val notes = bundle.getString("notes", "")
-            selectedLatitude = bundle.getDouble("lat", 0.0)
-            selectedLongitude = bundle.getDouble("lng", 0.0)
-
-            // Riempiamo i campi
-            view.findViewById<TextInputEditText>(R.id.etLocationName).setText(name)
-            view.findViewById<TextInputEditText>(R.id.etNotes).setText(notes)
-            actvParkingType.setText(type, false)
-
-            if (type == "All'ora") {
-                layoutHourlyCosts.visibility = View.VISIBLE
-            }
-
-            // Scegliamo di default "Parcheggia Veicolo" così l'utente è pronto a parcheggiare
-            toggleGroup.check(R.id.btnParkVehicle)
-        }
-
-        val btnDeleteLoc = view.findViewById<Button>(R.id.btnDeleteLocation)
-        val isVehicleLocked = arguments?.getBoolean("is_vehicle_locked") ?: false
-        val isLocationLocked = arguments?.containsKey("location_id") ?: false && !arguments?.getBoolean("is_edit_mode", false)!!
-
-        // Se stiamo modificando un luogo (non in modalità parcheggio rapido), mostriamo Elimina
-        if (arguments?.getBoolean("is_edit_mode") == true) {
-            btnDeleteLoc.visibility = View.VISIBLE
-            btnDeleteLoc.setOnClickListener {
-                editingLocationId?.let { id ->
-                    // Recupera l'oggetto e chiama viewModel.removeSavedLocation
-                    dismiss()
-                }
-            }
-        }
-
-        // Se il veicolo è bloccato (arriviamo dal Tab Veicoli)
-        if (isVehicleLocked) {
-            val vehicleName = arguments?.getString("preselected_vehicle_name")
-            actvVehicle.setText(vehicleName, false)
-            actvVehicle.isEnabled = false // BLOCCHIAMO IL CAMPO
-            toggleGroup.check(R.id.btnParkVehicle)
-        }
-
-        // Se il luogo è bloccato (arriviamo dal click sulla card Luoghi)
-        if (isLocationLocked) {
-            view.findViewById<TextInputEditText>(R.id.etLocationName).isEnabled = false
-            actvParkingType.isEnabled = false
-            view.findViewById<Button>(R.id.btnGetLocation).visibility = View.GONE
-            // Blocca anche la mappa se vuoi
+            dismiss()
         }
     }
 

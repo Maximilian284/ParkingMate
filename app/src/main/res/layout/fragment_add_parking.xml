@@ -25,7 +25,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- 1. I DUE BOTTONI PRINCIPALI -->
+            <!-- 1. I DUE BOTTONI PRINCIPALI (Toggle) -->
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/toggleGroupAction"
                 android:layout_width="match_parent"
@@ -33,77 +33,32 @@
                 app:singleSelection="true"
                 app:selectionRequired="true"
                 app:checkedButton="@+id/btnSaveFavoriteOnly">
-
-                <Button
-                    android:id="@+id/btnSaveFavoriteOnly"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Solo Preferito" />
-
-                <Button
-                    android:id="@+id/btnParkVehicle"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Parcheggia Veicolo" />
+                <Button android:id="@+id/btnSaveFavoriteOnly" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Solo Preferito" />
+                <Button android:id="@+id/btnParkVehicle" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Parcheggia Veicolo" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
-            <!-- 2. NOME E CUORICINO -->
-            <LinearLayout
+            <!-- ============================================== -->
+            <!-- 2. SCELTA DEL VEICOLO (SPOSTATO IN ALTO)       -->
+            <!-- ============================================== -->
+            <TextView
+                android:id="@+id/tvDisplayVehicle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="16dp"
-                android:gravity="center_vertical">
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:hint="Nome Luogo (es. Sotto casa)">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etLocationName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <!-- Il cuoricino (appare solo se stiamo parcheggiando) -->
-                <CheckBox
-                    android:id="@+id/cbSaveAsFavorite"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:button="@drawable/sl_favorite_heart"
-                    android:visibility="gone"
-                    android:layout_marginStart="8dp" />
-            </LinearLayout>
-
-            <!-- 4. TIPO DI PARCHEGGIO -->
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:hint="Tipo di Tariffa">
-                <AutoCompleteTextView
-                    android:id="@+id/actvParkingType"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- 3. SCELTA DEL VEICOLO (Appare solo se parcheggi) -->
             <LinearLayout
                 android:id="@+id/layoutVehicleSelection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="gone"
-                android:layout_marginTop="16dp">
+                android:layout_marginTop="8dp">
 
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilSelectVehicle"
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -116,6 +71,90 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
+            <!-- ============================================== -->
+            <!-- 3. NOME / SELEZIONE LUOGO (ORA È SOTTO)        -->
+            <!-- ============================================== -->
+            <TextView
+                android:id="@+id/tvDisplayLocationName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilLocationName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Nome Luogo (es. Sotto casa)">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etLocationName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Menu a tendina Luogo -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilSelectExistingLocation"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:visibility="gone"
+                    android:hint="Scegli Luogo Salvato">
+                    <AutoCompleteTextView
+                        android:id="@+id/actvSelectLocation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Cuoricino -->
+                <CheckBox
+                    android:id="@+id/cbSaveAsFavorite"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:button="@drawable/sl_favorite_heart"
+                    android:visibility="gone"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
+
+            <!-- 4. TIPO DI PARCHEGGIO E TARIFFE                -->
+            <!-- ============================================== -->
+
+            <!-- Testo pulito per quando è bloccato -->
+            <TextView
+                android:id="@+id/tvDisplayParkingType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:layout_marginTop="16dp"
+                android:textColor="?attr/colorPrimary"
+                android:visibility="gone" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilParkingType"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="Tipo di Tariffa">
+                <AutoCompleteTextView
+                    android:id="@+id/actvParkingType"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
 
             <!-- 5. COSTI (Appare solo se scegli "All'ora") -->
             <LinearLayout
@@ -166,6 +205,7 @@
 
             <!-- 6. POSIZIONE GPS -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardMap"
                 android:layout_width="match_parent"
                 android:layout_height="150dp"
                 android:layout_marginTop="16dp"
@@ -176,13 +216,11 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
 
-                    <!-- QUESTA È LA MAPPA VERA -->
                     <com.google.android.gms.maps.MapView
                         android:id="@+id/mapViewMini"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />
 
-                    <!-- Il bottone fluttuante sopra la mappa -->
                     <Button
                         android:id="@+id/btnGetLocation"
                         style="@style/Widget.Material3.Button.TonalButton"
@@ -197,6 +235,7 @@
 
             <!-- 7. NOTE E FOTO -->
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilNotes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -220,23 +259,31 @@
         </LinearLayout>
     </ScrollView>
 
-    <Button
-        android:id="@+id/btnDeleteLocation"
-        style="@style/Widget.Material3.Button.TextButton"
+    <!-- I DUE PULSANTI AFFIANCATI IN FONDO -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:text="Elimina"
-        android:textColor="#FF0000"
-        android:visibility="gone" />
+        android:orientation="horizontal"
+        android:padding="16dp">
 
-    <!-- BOTTONE SALVA FINALE -->
-    <Button
-        android:id="@+id/btnSaveEverything"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:padding="12dp"
-        android:text="Salva" />
+        <Button
+            android:id="@+id/btnDeleteLocation"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="ELIMINA"
+            app:backgroundTint="#D32F2F"
+            android:textColor="@android:color/white"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnSaveEverything"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="SALVA" />
+    </LinearLayout>
 
 </LinearLayout>

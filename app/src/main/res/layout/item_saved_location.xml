@@ -50,7 +50,7 @@
             android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_edit"
-            app:tint="#FF0000" />
+            app:tint="?attr/colorOnSurface" /> <!-- Questo lo rende coerente col tema -->
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

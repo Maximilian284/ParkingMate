@@ -29,14 +29,16 @@ interface AppDao {
     @Query("SELECT * FROM saved_locations")
     fun getAllLocations(): Flow<List<SavedLocation>>
 
+    @Transaction
+    @Query("SELECT * FROM parking_sessions WHERE isActive = 1 ORDER BY startTime DESC")
+    fun getActiveParkings(): Flow<List<SessionWithVehicle>>
+
+    @Transaction
+    @Query("SELECT * FROM parking_sessions WHERE isActive = 0 ORDER BY startTime DESC")
+    fun getHistoryParkings(): Flow<List<SessionWithVehicle>>
+
     @Insert
     suspend fun insertSession(session: ParkingSession)
-
-    @Query("SELECT * FROM parking_sessions WHERE isActive = 1")
-    fun getActiveSessions(): Flow<List<ParkingSession>>
-
-    @Query("SELECT * FROM parking_sessions WHERE isActive = 0 ORDER BY startTime DESC")
-    fun getHistorySessions(): Flow<List<ParkingSession>>
 
     @Update
     suspend fun updateSession(session: ParkingSession)

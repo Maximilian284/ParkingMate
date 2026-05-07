@@ -106,10 +106,8 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
         val etName = dialogView.findViewById<TextInputEditText>(R.id.etVehicleName)
         val actvType = dialogView.findViewById<AutoCompleteTextView>(R.id.actvVehicleType)
 
-        // Imposta il menu a tendina
         actvType.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, vehicleTypes))
 
-        // Se sto modificando un veicolo esistente, pre-compilo i campi!
         if (vehicleToEdit != null) {
             etName.setText(vehicleToEdit.name)
             actvType.setText(vehicleToEdit.type, false)
@@ -117,35 +115,35 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
 
         val title = if (vehicleToEdit == null) "Aggiungi Veicolo" else "Modifica Veicolo"
 
-        MaterialAlertDialogBuilder(requireContext())
+        val builder = MaterialAlertDialogBuilder(requireContext())
             .setTitle(title)
             .setView(dialogView)
             .setPositiveButton("Salva") { _, _ ->
                 val name = etName.text.toString().trim()
                 val type = actvType.text.toString()
-
                 if (name.isNotEmpty() && type.isNotEmpty()) {
                     if (vehicleToEdit == null) {
-                        viewModel.addVehicle(name, type) // Crea nuovo
+                        viewModel.addVehicle(name, type)
                     } else {
-                        // Modifica esistente (Dovrai aggiungere updateVehicle nel ViewModel!)
-                        val updatedVehicle = vehicleToEdit.copy(name = name, type = type)
-                        viewModel.updateVehicle(updatedVehicle)
+                        viewModel.updateVehicle(vehicleToEdit.copy(name = name, type = type))
                     }
                 }
             }
             .setNegativeButton("Annulla", null)
-            .show()
 
-        val btnDelete = dialogView.findViewById<Button>(R.id.btnDeleteVehicle)
-
+        // 1. Aggiungiamo il tasto ELIMINA nativo in basso a sinistra
         if (vehicleToEdit != null) {
-            btnDelete.visibility = View.VISIBLE
-            btnDelete.setOnClickListener {
+            builder.setNeutralButton("ELIMINA") { _, _ ->
                 viewModel.removeVehicle(vehicleToEdit)
-                // Chiudiamo il dialog (dovrai salvare il riferimento al dialog creato con .show())
-                // dialog.dismiss()
             }
+        }
+
+        val dialog = builder.create()
+        dialog.show()
+
+        // 2. Lo coloriamo di rosso per farlo risaltare
+        if (vehicleToEdit != null) {
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL)?.setTextColor(android.graphics.Color.RED)
         }
     }
 

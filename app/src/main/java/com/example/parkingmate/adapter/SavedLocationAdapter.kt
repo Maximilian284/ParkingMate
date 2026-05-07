@@ -18,7 +18,7 @@ class SavedLocationAdapter(
     class LocationViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvName: TextView = view.findViewById(R.id.tvLocationName)
         val tvType: TextView = view.findViewById(R.id.tvLocationType)
-        val btnEdit: ImageButton = view.findViewById(R.id.btnEditLocation) // Assicurati che l'id sia btnEditLocation
+        val btnEdit: ImageButton = view.findViewById(R.id.btnEditLocation)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LocationViewHolder {
