@@ -2,16 +2,19 @@ package com.example.parkingmate
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.location.Geocoder
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
-import android.widget.ImageButton
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -34,7 +37,9 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.Slider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -78,20 +83,19 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         btnSelectMonth = view.findViewById(R.id.btnSelectMonth)
         toolbar = view.findViewById(R.id.toolbarHome)
 
-        // 1. TOOLBAR E I DUE PULSANTI
         toolbar.menu.clear()
         toolbar.inflateMenu(R.menu.menu_home)
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_toggle_view -> {
                     isMapMode = !isMapMode
-                    menuItem.setIcon(if (isMapMode) android.R.drawable.ic_menu_sort_by_size else android.R.drawable.ic_dialog_map)
+                    menuItem.setIcon(if (isMapMode) android.R.drawable.ic_dialog_map else android.R.drawable.ic_menu_sort_by_size)
                     updateUI()
                     true
                 }
                 R.id.action_toggle_history -> {
                     isHistoryMode = !isHistoryMode
-                    menuItem.setIcon(if (isHistoryMode) android.R.drawable.ic_menu_info_details else android.R.drawable.ic_menu_recent_history)
+                    menuItem.setIcon(if (isHistoryMode) android.R.drawable.ic_menu_recent_history else android.R.drawable.ic_menu_info_details)
                     toolbar.title = if (isHistoryMode) "Storico Parcheggi" else "Parcheggi Attivi"
                     updateUI()
                     true
@@ -100,10 +104,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             }
         }
 
-        // 2. ADAPTER E LISTA
+        // --- CREAZIONE ADAPTER (CON TUTTI E 4 I PARAMETRI) ---
         adapter = ParkingAdapter(
             parkings = emptyList(),
-            onCardClick = { session -> showEditTimeDialog(session) },
+            onCardClick = { item ->
+                showParkingDetailsDialog(item)
+            },
             onEndClick = { sessionToEnd ->
                 MaterialAlertDialogBuilder(requireContext())
                     .setTitle("Termina Parcheggio")
@@ -114,12 +120,22 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                     }
                     .setNegativeButton("Annulla", null)
                     .show()
+            },
+            onDeleteClick = { sessionToDelete ->
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Elimina Parcheggio")
+                    .setMessage("Vuoi eliminare definitivamente questo record?")
+                    .setPositiveButton("Elimina") { _, _ ->
+                        viewModel.deleteParkingSession(sessionToDelete)
+                        Toast.makeText(requireContext(), "Eliminato!", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Annulla", null)
+                    .show()
             }
         )
         rvHomeParkings.layoutManager = LinearLayoutManager(requireContext())
         rvHomeParkings.adapter = adapter
 
-        // 3. MAPPA
         mapView = view.findViewById(R.id.mapViewHome)
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync { map ->
@@ -129,7 +145,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
         setupSliderControls()
 
-        // 4. RACCOLTA DATI
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
@@ -148,39 +163,28 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         }
 
         val btnPlay = view.findViewById<ImageButton>(R.id.btnPlayHistory)
-
         btnPlay.setOnClickListener {
             if (isPlaying) {
-                // STOP
                 isPlaying = false
                 playJob?.cancel()
                 btnPlay.setImageResource(android.R.drawable.ic_media_play)
             } else {
-                // START
                 isPlaying = true
                 btnPlay.setImageResource(android.R.drawable.ic_media_pause)
-
                 playJob = viewLifecycleOwner.lifecycleScope.launch {
-                    // Partiamo da dove si trova ora lo slider o da 0
                     var currentVal = sliderTime.value
                     if (currentVal >= 1440f) currentVal = 0f
-
                     while (isPlaying && currentVal < 1440f) {
-                        currentVal += 30f // Avanza di mezz'ora alla volta
+                        currentVal += 30f
                         sliderTime.value = currentVal
-
-                        // Aggiorniamo orario e pin
                         val hours = (currentVal / 60).toInt()
                         val minutes = (currentVal % 60).toInt()
                         currentCalendar.set(Calendar.HOUR_OF_DAY, hours)
                         currentCalendar.set(Calendar.MINUTE, minutes)
                         updateSliderText()
                         updateMapMarkers(moveCamera = false)
-
-                        kotlinx.coroutines.delay(800) // Aspetta quasi un secondo tra uno scatto e l'altro
+                        kotlinx.coroutines.delay(350)
                     }
-
-                    // Fine giornata o stop manuale
                     isPlaying = false
                     btnPlay.setImageResource(android.R.drawable.ic_media_play)
                 }
@@ -188,16 +192,66 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         }
     }
 
-    private fun showEditTimeDialog(session: ParkingSession) {
-        val options = if (session.isActive) arrayOf("Modifica Data/Ora Inizio") else arrayOf("Modifica Data/Ora Inizio", "Modifica Data/Ora Fine")
+    private fun showParkingDetailsDialog(item: SessionWithVehicle) {
+        val session = item.session
+        val vehicle = item.vehicle
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_parking_details, null)
+
+        val tvLocation = dialogView.findViewById<TextView>(R.id.tvDetailLocation)
+        val tvVehicle = dialogView.findViewById<TextView>(R.id.tvDetailVehicle)
+        val tvStartDate = dialogView.findViewById<TextView>(R.id.tvDetailStartDate)
+        val tvTariff = dialogView.findViewById<TextView>(R.id.tvDetailTariff)
+        val tvNotes = dialogView.findViewById<TextView>(R.id.tvDetailNotes)
+        val ivPhoto = dialogView.findViewById<ImageView>(R.id.ivDetailPhoto)
+
+        tvVehicle.text = "Veicolo: ${vehicle.name} (${vehicle.type})"
+        val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+        tvStartDate.text = "Inizio: ${dateFormat.format(session.startTime)}"
+
+        val tariffTranslated = when(session.type) {
+            "Free" -> "Sosta Libera"
+            "Hourly" -> "A Ore"
+            "Fixed" -> "Ticket Fisso"
+            else -> session.type
+        }
+        tvTariff.text = "Tariffa: $tariffTranslated"
+
+        if (!session.note.isNullOrBlank()) {
+            tvNotes.visibility = View.VISIBLE
+            tvNotes.text = "Note: ${session.note}"
+        }
+        if (!session.photoPath.isNullOrBlank()) {
+            ivPhoto.visibility = View.VISIBLE
+            ivPhoto.setImageURI(Uri.parse(session.photoPath))
+        }
+
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Modifica Parcheggio")
+            .setView(dialogView)
+            .setPositiveButton("Chiudi", null)
+            .setNeutralButton("Modifica Ora") { _, _ -> showEditTimeDialog(session) }
+            .show()
+
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val geocoder = Geocoder(requireContext(), Locale.getDefault())
+                val addresses = geocoder.getFromLocation(session.latitude, session.longitude, 1)
+                val locationName = if (!addresses.isNullOrEmpty()) addresses[0].getAddressLine(0) else "Lat: ${session.latitude}, Lon: ${session.longitude}"
+                withContext(Dispatchers.Main) { tvLocation.text = locationName }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { tvLocation.text = "Posizione non disponibile" }
+            }
+        }
+    }
+
+    private fun showEditTimeDialog(session: ParkingSession) {
+        val options = if (session.isActive) arrayOf("Modifica Inizio") else arrayOf("Modifica Inizio", "Modifica Fine")
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Modifica Orario")
             .setItems(options) { _, which ->
                 val timeToEdit = if (which == 0) session.startTime else session.endTime ?: System.currentTimeMillis()
                 pickDateTime(timeToEdit) { newTimeMillis ->
-                    val updatedSession = if (which == 0) session.copy(startTime = newTimeMillis) else session.copy(endTime = newTimeMillis)
-                    viewModel.updateParkingSession(updatedSession)
-                    Toast.makeText(requireContext(), "Orario aggiornato!", Toast.LENGTH_SHORT).show()
+                    val updated = if (which == 0) session.copy(startTime = newTimeMillis) else session.copy(endTime = newTimeMillis)
+                    viewModel.updateParkingSession(updated)
                 }
             }
             .show()
@@ -216,52 +270,29 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private fun setupSliderControls() {
         btnSelectMonth.text = "Scegli Data"
-        btnSelectMonth.setCompoundDrawablesWithIntrinsicBounds(android.R.drawable.ic_menu_today, 0, 0, 0)
-
         sliderTime.valueFrom = 0f
         sliderTime.valueTo = 1440f
         sliderTime.stepSize = 30f
-
         sliderTime.setLabelFormatter { value ->
-            var hours = (value / 60).toInt()
-            var minutes = (value % 60).toInt()
-            if (hours == 24) { hours = 23; minutes = 59 }
-            String.format(Locale.getDefault(), "%02d:%02d", hours, minutes)
+            var h = (value / 60).toInt(); var m = (value % 60).toInt()
+            if (h == 24) { h = 23; m = 59 }
+            String.format(Locale.getDefault(), "%02d:%02d", h, m)
         }
-
         val currentMinutes = (currentCalendar.get(Calendar.HOUR_OF_DAY) * 60) + currentCalendar.get(Calendar.MINUTE)
-        val roundedMinutes = (currentMinutes / 30) * 30
-        sliderTime.value = roundedMinutes.toFloat()
+        sliderTime.value = ((currentMinutes / 30) * 30).toFloat()
         updateSliderText()
-
-        // Cambia l'ora scritta, MA NON AGGIORNA LA MAPPA
         sliderTime.addOnChangeListener { _, value, _ ->
-            var hours = (value / 60).toInt()
-            var minutes = (value % 60).toInt()
-            if (hours == 24) { hours = 23; minutes = 59 }
-
-            currentCalendar.set(Calendar.HOUR_OF_DAY, hours)
-            currentCalendar.set(Calendar.MINUTE, minutes)
-            currentCalendar.set(Calendar.SECOND, 0)
-            currentCalendar.set(Calendar.MILLISECOND, 0)
+            var h = (value / 60).toInt(); var m = (value % 60).toInt()
+            currentCalendar.set(Calendar.HOUR_OF_DAY, h); currentCalendar.set(Calendar.MINUTE, m)
             updateSliderText()
         }
-
-        // AGGIORNA LA MAPPA SOLO QUANDO ALZI IL DITO! (Fine sfarfallio e sovrapposizioni)
         sliderTime.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
             override fun onStartTrackingTouch(slider: Slider) {}
-            override fun onStopTrackingTouch(slider: Slider) {
-                updateMapMarkers(moveCamera = false)
-            }
+            override fun onStopTrackingTouch(slider: Slider) { updateMapMarkers(false) }
         })
-
         btnSelectMonth.setOnClickListener {
-            DatePickerDialog(requireContext(), { _, year, month, day ->
-                currentCalendar.set(Calendar.YEAR, year)
-                currentCalendar.set(Calendar.MONTH, month)
-                currentCalendar.set(Calendar.DAY_OF_MONTH, day)
-                updateSliderText()
-                updateMapMarkers(moveCamera = true)
+            DatePickerDialog(requireContext(), { _, y, m, d ->
+                currentCalendar.set(y, m, d); updateSliderText(); updateMapMarkers(true)
             }, currentCalendar.get(Calendar.YEAR), currentCalendar.get(Calendar.MONTH), currentCalendar.get(Calendar.DAY_OF_MONTH)).show()
         }
     }
@@ -276,7 +307,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             rvHomeParkings.visibility = View.GONE
             layoutMapContainer.visibility = View.VISIBLE
             layoutHistoryControls.visibility = if (isHistoryMode) View.VISIBLE else View.GONE
-            updateMapMarkers(moveCamera = true)
+            updateMapMarkers(true)
         } else {
             layoutMapContainer.visibility = View.GONE
             rvHomeParkings.visibility = View.VISIBLE
@@ -286,40 +317,28 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private fun updateMapMarkers(moveCamera: Boolean) {
         val map = googleMap ?: return
-        map.clear() // Pulizia sicura
-        var lastKnownPosition: LatLng? = null
-
+        map.clear()
+        var lastPos: LatLng? = null
         if (!isHistoryMode) {
             for (item in activeList) {
                 val pos = LatLng(item.session.latitude, item.session.longitude)
-                map.addMarker(MarkerOptions().position(pos).title(item.vehicle.name).snippet("In sosta").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)))
-                lastKnownPosition = pos
+                map.addMarker(MarkerOptions().position(pos).title(item.vehicle.name).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)))
+                lastPos = pos
             }
         } else {
-            // Pulizia esatta della data dello slider
-            currentCalendar.set(Calendar.SECOND, 0)
-            currentCalendar.set(Calendar.MILLISECOND, 0)
-            val selectedTimeMillis = currentCalendar.timeInMillis
-
+            val selected = currentCalendar.timeInMillis
             for (item in historyList) {
-                val sessionStart = item.session.startTime
-                // FIX FANTASMA: Se la fine non c'è, usa l'inizio (così non si spalma per 2 mesi interi)
-                val sessionEnd = item.session.endTime ?: item.session.startTime
-
-                if (selectedTimeMillis in sessionStart..sessionEnd) {
+                val start = item.session.startTime; val end = item.session.endTime ?: start
+                if (selected in start..end) {
                     val pos = LatLng(item.session.latitude, item.session.longitude)
-                    map.addMarker(MarkerOptions().position(pos).title(item.vehicle.name).snippet("Parcheggiato").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)))
-                    lastKnownPosition = pos
+                    map.addMarker(MarkerOptions().position(pos).title(item.vehicle.name).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)))
+                    lastPos = pos
                 }
             }
         }
-
         if (moveCamera) {
-            if (lastKnownPosition != null) {
-                map.animateCamera(CameraUpdateFactory.newLatLngZoom(lastKnownPosition, 14f))
-            } else {
-                map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(44.4949, 11.3426), 12f))
-            }
+            val target = lastPos ?: LatLng(44.4949, 11.3426)
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(target, if (lastPos != null) 14f else 12f))
         }
     }
 
@@ -328,5 +347,4 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     override fun onPause() { super.onPause(); mapView.onPause() }
     override fun onStop() { super.onStop(); mapView.onStop() }
     override fun onDestroyView() { super.onDestroyView(); mapView.onDestroy(); googleMap = null }
-    override fun onLowMemory() { super.onLowMemory(); mapView.onLowMemory() }
 }

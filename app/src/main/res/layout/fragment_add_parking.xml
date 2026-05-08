@@ -15,6 +15,7 @@
         app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel" />
 
     <ScrollView
+        android:id="@+id/scrollViewAddParking"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
@@ -25,7 +26,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- 1. I DUE BOTTONI PRINCIPALI (Toggle) -->
+            <!-- 1. TOGGLE AZIONE -->
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/toggleGroupAction"
                 android:layout_width="match_parent"
@@ -33,54 +34,19 @@
                 app:singleSelection="true"
                 app:selectionRequired="true"
                 app:checkedButton="@+id/btnSaveFavoriteOnly">
+
                 <Button android:id="@+id/btnSaveFavoriteOnly" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Solo Preferito" />
                 <Button android:id="@+id/btnParkVehicle" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Parcheggia Veicolo" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
-            <!-- ============================================== -->
-            <!-- 2. SCELTA DEL VEICOLO (SPOSTATO IN ALTO)       -->
-            <!-- ============================================== -->
-            <TextView
-                android:id="@+id/tvDisplayVehicle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginTop="8dp"
-                android:visibility="gone" />
-
-            <LinearLayout
-                android:id="@+id/layoutVehicleSelection"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone"
-                android:layout_marginTop="8dp">
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilSelectVehicle"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Seleziona Veicolo">
-                    <AutoCompleteTextView
-                        android:id="@+id/actvSelectVehicle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="none" />
-                </com.google.android.material.textfield.TextInputLayout>
-            </LinearLayout>
-
-            <!-- ============================================== -->
-            <!-- 3. NOME / SELEZIONE LUOGO (ORA È SOTTO)        -->
-            <!-- ============================================== -->
+            <!-- 2. NOME / SELEZIONE LUOGO -->
             <TextView
                 android:id="@+id/tvDisplayLocationName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="22sp"
                 android:textStyle="bold"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
                 android:layout_marginBottom="8dp"
                 android:visibility="gone" />
 
@@ -97,13 +63,9 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:hint="Nome Luogo (es. Sotto casa)">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etLocationName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etLocationName" android:layout_width="match_parent" android:layout_height="wrap_content" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Menu a tendina Luogo -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilSelectExistingLocation"
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
@@ -112,14 +74,9 @@
                     android:layout_weight="1"
                     android:visibility="gone"
                     android:hint="Scegli Luogo Salvato">
-                    <AutoCompleteTextView
-                        android:id="@+id/actvSelectLocation"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="none" />
+                    <AutoCompleteTextView android:id="@+id/actvSelectLocation" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Cuoricino -->
                 <CheckBox
                     android:id="@+id/cbSaveAsFavorite"
                     android:layout_width="wrap_content"
@@ -129,10 +86,7 @@
                     android:layout_marginStart="8dp" />
             </LinearLayout>
 
-            <!-- 4. TIPO DI PARCHEGGIO E TARIFFE                -->
-            <!-- ============================================== -->
-
-            <!-- Testo pulito per quando è bloccato -->
+            <!-- 3. TIPO DI TARIFFA E COSTI -->
             <TextView
                 android:id="@+id/tvDisplayParkingType"
                 android:layout_width="match_parent"
@@ -149,14 +103,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="Tipo di Tariffa">
-                <AutoCompleteTextView
-                    android:id="@+id/actvParkingType"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none" />
+                <AutoCompleteTextView android:id="@+id/actvParkingType" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- 5. COSTI (Appare solo se scegli "All'ora") -->
             <LinearLayout
                 android:id="@+id/layoutHourlyCosts"
                 android:layout_width="match_parent"
@@ -165,49 +114,75 @@
                 android:visibility="gone"
                 android:layout_marginTop="8dp">
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:hint="Fisso Iniziale €">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etCostInitial"
-                        android:inputType="numberDecimal"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"/>
+                <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Fisso Iniziale €">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etCostInitial" android:inputType="numberDecimal" android:layout_width="match_parent" android:layout_height="wrap_content"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="8dp"
-                    android:hint="Costo/Ora €">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etCostHourly"
-                        android:inputType="numberDecimal"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"/>
+                <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginHorizontal="8dp" android:hint="Costo/Ora €">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etCostHourly" android:inputType="numberDecimal" android:layout_width="match_parent" android:layout_height="wrap_content"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:hint="Max €">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etCostMax"
-                        android:inputType="numberDecimal"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"/>
+                <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Max €">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etCostMax" android:inputType="numberDecimal" android:layout_width="match_parent" android:layout_height="wrap_content"/>
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- 6. POSIZIONE GPS -->
+            <LinearLayout
+                android:id="@+id/layoutFixedCosts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp">
+
+                <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginEnd="8dp" android:hint="Costo Totale €">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etFixedCost" android:inputType="numberDecimal" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <Button
+                    android:id="@+id/btnFixedEndTime"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Scadenza"
+                    app:icon="@android:drawable/ic_menu_recent_history" />
+            </LinearLayout>
+
+            <!-- 4. SELEZIONE VEICOLO -->
+            <TextView
+                android:id="@+id/tvDisplayVehicle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/layoutVehicleSelection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="16dp">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilSelectVehicle"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Seleziona Veicolo">
+                    <AutoCompleteTextView android:id="@+id/actvSelectVehicle" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <!-- 5. MAPPA (CON FIX SCROLL) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardMap"
                 android:layout_width="match_parent"
-                android:layout_height="150dp"
+                android:layout_height="200dp"
                 android:layout_marginTop="16dp"
                 app:cardBackgroundColor="#E0E0E0"
                 app:cardCornerRadius="12dp">
@@ -221,6 +196,36 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />
 
+                    <!-- Ricerca e Ingrandisci -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_margin="8dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tvSearchMap"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text=" Cerca via/città..."
+                            android:padding="12dp"
+                            android:background="#DDFFFFFF"
+                            android:textColor="#333333"
+                            android:visibility="gone"
+                            app:drawableStartCompat="@android:drawable/ic_menu_search" />
+
+                        <ImageButton
+                            android:id="@+id/btnExpandMap"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="8dp"
+                            android:src="@android:drawable/ic_menu_zoom"
+                            android:background="#DDFFFFFF"
+                            app:tint="?attr/colorPrimary" />
+                    </LinearLayout>
+
                     <Button
                         android:id="@+id/btnGetLocation"
                         style="@style/Widget.Material3.Button.TonalButton"
@@ -233,18 +238,14 @@
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 7. NOTE E FOTO -->
+            <!-- 6. NOTE E FOTO -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilNotes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="Note aggiuntive">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etNotes"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:lines="3" />
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etNotes" android:layout_width="match_parent" android:layout_height="wrap_content" android:lines="3" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Button
@@ -259,7 +260,6 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- I DUE PULSANTI AFFIANCATI IN FONDO -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

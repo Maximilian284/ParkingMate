@@ -49,8 +49,19 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Tariffa"
-                    android:textColor="#666666" />
+                    android:textColor="#888888" />
             </LinearLayout>
+
+            <!-- TASTO ELIMINA (Cestino) in alto a destra -->
+            <ImageButton
+                android:id="@+id/btnDeleteParking"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@android:drawable/ic_menu_delete"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="#D32F2F"
+                android:visibility="gone" /> <!-- Nascosto di default -->
+
         </LinearLayout>
 
         <!-- Orari e Date -->

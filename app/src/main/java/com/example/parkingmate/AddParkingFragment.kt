@@ -2,18 +2,22 @@ package com.example.parkingmate
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.graphics.Bitmap
 import android.location.Location
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.DialogFragment
@@ -32,11 +36,20 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.widget.Autocomplete
+import com.google.android.libraries.places.widget.AutocompleteActivity
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.Calendar
+import android.content.pm.PackageManager
+import android.content.pm.ApplicationInfo
+import android.os.Build
 
 class AddParkingFragment : DialogFragment() {
 
@@ -51,31 +64,47 @@ class AddParkingFragment : DialogFragment() {
 
     private var selectedLatitude: Double = 0.0
     private var selectedLongitude: Double = 0.0
-    private var currentVehicles: List<Vehicle> = emptyList() // Per ricordare i veicoli
-    private var savedPhotoPath: String? = null // Per ricordare la foto scattata
-
+    private var currentVehicles: List<Vehicle> = emptyList()
+    private var savedPhotoPath: String? = null
     private var editingLocationId: Int? = null
+    private var fixedEndTimeMillis: Long? = null
 
-    // --- 1. MOTORE DELLA FOTOCAMERA ---
+    // --- LA RICERCA CON PLACES ---
+    private val autocompleteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        when (result.resultCode) {
+            android.app.Activity.RESULT_OK -> {
+                result.data?.let { data ->
+                    val place = Autocomplete.getPlaceFromIntent(data)
+                    place.latLng?.let { latLng ->
+                        googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
+                        googleMap?.clear()
+                        googleMap?.addMarker(MarkerOptions().position(latLng).title(place.name))
+                        selectedLatitude = latLng.latitude
+                        selectedLongitude = latLng.longitude
+                        view?.findViewById<TextView>(R.id.tvSearchMap)?.text = " ${place.name}"
+                    }
+                }
+            }
+            AutocompleteActivity.RESULT_ERROR -> {
+                result.data?.let { data ->
+                    val status = Autocomplete.getStatusFromIntent(data)
+                    Toast.makeText(requireContext(), "Errore API: ${status.statusMessage}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     private val takePictureLauncher = registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
         if (bitmap != null) {
-            // Salva la foto nella memoria interna del telefono
             val file = File(requireContext().filesDir, "park_photo_${System.currentTimeMillis()}.jpg")
-            file.outputStream().use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
-            }
+            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it) }
             savedPhotoPath = file.absolutePath
-            Toast.makeText(requireContext(), "Foto salvata con successo!", Toast.LENGTH_SHORT).show()
             view?.findViewById<Button>(R.id.btnAddPhoto)?.text = "Foto Aggiunta ✓"
         }
     }
 
     private val locationPermissionRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        if (permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false)) {
-            getCurrentLocation()
-        } else {
-            Toast.makeText(requireContext(), "Permesso GPS negato.", Toast.LENGTH_SHORT).show()
-        }
+        if (permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false)) getCurrentLocation()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,48 +116,56 @@ class AddParkingFragment : DialogFragment() {
         return inflater.inflate(R.layout.fragment_add_parking, container, false)
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         view.findViewById<MaterialToolbar>(R.id.toolbarAddParking).setNavigationOnClickListener { dismiss() }
 
-        // --- 1. RECUPERO STATI E BUNDLE ---
+        // Inizializza Places leggendo la chiave dal Manifest
+        if (!Places.isInitialized()) {
+            try {
+                // Legge i metadati del Manifest in modo sicuro per il 2026
+                val appInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    requireContext().packageManager.getApplicationInfo(
+                        requireContext().packageName,
+                        PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong())
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    requireContext().packageManager.getApplicationInfo(
+                        requireContext().packageName,
+                        PackageManager.GET_META_DATA
+                    )
+                }
+
+                val apiKey = appInfo.metaData.getString("com.google.android.geo.API_KEY")
+
+                if (apiKey != null && apiKey.startsWith("AIza")) {
+                    Places.initialize(requireContext().applicationContext, apiKey)
+                } else {
+                    // Se non trova la chiave, lo segnala nel Logcat
+                    android.util.Log.e("ParkMate", "ERRORE: Chiave API non trovata nel Manifest!")
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
         val isVehicleLocked = arguments?.getBoolean("is_vehicle_locked", false) ?: false
+        val isLocationLocked = arguments?.containsKey("location_id") == true && !(arguments?.getBoolean("is_edit_mode", false) ?: false)
         val isEditMode = arguments?.getBoolean("is_edit_mode", false) ?: false
-        // Se c'è un location_id e NON siamo in modalità modifica, significa che stiamo parcheggiando da un Luogo (è bloccato)
-        val isLocationLocked = arguments?.containsKey("location_id") == true && !isEditMode
         editingLocationId = arguments?.getInt("location_id", -1)?.takeIf { it != -1 }
 
-        // --- 2. COLLEGAMENTO UI ---
         val toggleGroup = view.findViewById<MaterialButtonToggleGroup>(R.id.toggleGroupAction)
+        val layoutVehicleSelection = view.findViewById<LinearLayout>(R.id.layoutVehicleSelection)
         val cbHeart = view.findViewById<CheckBox>(R.id.cbSaveAsFavorite)
-        val layoutHourlyCosts = view.findViewById<LinearLayout>(R.id.layoutHourlyCosts)
-
-        // Campi Luogo
-        val tilLocationInput = view.findViewById<View>(R.id.tilLocationName)
-        val etLocationName = view.findViewById<TextInputEditText>(R.id.etLocationName)
-        val tvDisplayLocation = view.findViewById<TextView>(R.id.tvDisplayLocationName)
-        val tilSelectExistingLocation = view.findViewById<View>(R.id.tilSelectExistingLocation)
-        val actvSelectLocation = view.findViewById<AutoCompleteTextView>(R.id.actvSelectLocation)
-
-        // Campi Veicolo
-        val layoutVehicle = view.findViewById<LinearLayout>(R.id.layoutVehicleSelection)
-        val tilSelectVehicle = view.findViewById<View>(R.id.tilSelectVehicle)
-        val actvVehicle = view.findViewById<AutoCompleteTextView>(R.id.actvSelectVehicle)
-        val tvDisplayVehicle = view.findViewById<TextView>(R.id.tvDisplayVehicle)
-
-        // Campi Tipo
-        val tilParkingType = view.findViewById<View>(R.id.tilParkingType)
         val actvParkingType = view.findViewById<AutoCompleteTextView>(R.id.actvParkingType)
-        val tvDisplayParkingType = view.findViewById<TextView>(R.id.tvDisplayParkingType)
+        val layoutHourlyCosts = view.findViewById<LinearLayout>(R.id.layoutHourlyCosts)
+        val layoutFixedCosts = view.findViewById<LinearLayout>(R.id.layoutFixedCosts)
+        val btnFixedEndTime = view.findViewById<Button>(R.id.btnFixedEndTime)
+        val scrollView = view.findViewById<ScrollView>(R.id.scrollViewAddParking)
 
-        // Bottoni vari
-        val btnGetLocation = view.findViewById<Button>(R.id.btnGetLocation)
-        val btnDeleteLoc = view.findViewById<Button>(R.id.btnDeleteLocation)
-        val btnSaveEverything = view.findViewById<Button>(R.id.btnSaveEverything)
-        val cardMap = view.findViewById<View>(R.id.cardMap)
-
-        // --- 3. INIZIALIZZAZIONE MAPPA E GPS ---
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
         mapView = view.findViewById(R.id.mapViewMini)
         mapView.onCreate(savedInstanceState)
@@ -140,114 +177,137 @@ class AddParkingFragment : DialogFragment() {
             googleMap = map
             if (selectedLatitude != 0.0 && selectedLongitude != 0.0) {
                 val latLng = LatLng(selectedLatitude, selectedLongitude)
-                googleMap?.addMarker(MarkerOptions().position(latLng).title("Luogo salvato"))
+                googleMap?.addMarker(MarkerOptions().position(latLng).title("Luogo"))
                 googleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
             }
-
             if (!isLocationLocked) {
                 googleMap?.setOnMapClickListener { latLng ->
                     googleMap?.clear()
-                    googleMap?.addMarker(MarkerOptions().position(latLng).title("Parcheggio qui"))
+                    googleMap?.addMarker(MarkerOptions().position(latLng).title("Selezionato"))
                     selectedLatitude = latLng.latitude
                     selectedLongitude = latLng.longitude
                 }
             } else {
-                googleMap?.uiSettings?.setAllGesturesEnabled(false) // Blocca tocco se il luogo è fisso
+                googleMap?.uiSettings?.setAllGesturesEnabled(false)
             }
         }
 
-        btnGetLocation.setOnClickListener {
+        // QUESTA RIGA BLOCCA LO SCROLL DELLA PAGINA IN MODO NATIVO QUANDO TOCCHI LA MAPPA!
+        mapView.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> scrollView.requestDisallowInterceptTouchEvent(true)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> scrollView.requestDisallowInterceptTouchEvent(false)
+            }
+            false
+        }
+
+        view.findViewById<Button>(R.id.btnGetLocation).setOnClickListener {
             locationPermissionRequest.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         }
+        view.findViewById<Button>(R.id.btnAddPhoto).setOnClickListener { takePictureLauncher.launch(null) }
 
-        view.findViewById<Button>(R.id.btnAddPhoto).setOnClickListener {
-            takePictureLauncher.launch(null)
+        val tvSearchMap = view.findViewById<TextView>(R.id.tvSearchMap)
+        tvSearchMap.setOnClickListener {
+            if (Places.isInitialized()) {
+                val fields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG)
+                val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.OVERLAY, fields).build(requireContext())
+                autocompleteLauncher.launch(intent)
+            } else {
+                Toast.makeText(requireContext(), "Places API non pronta.", Toast.LENGTH_SHORT).show()
+            }
         }
 
-        // --- 4. LOGICA BASE MENU A TENDINA E TOGGLE ---
-        val parkingTypes = arrayOf("Gratis", "All'ora", "Già Pagato / Fisso")
-        actvParkingType.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, parkingTypes))
-        actvParkingType.setOnItemClickListener { _, _, position, _ ->
-            layoutHourlyCosts.visibility = if (parkingTypes[position] == "All'ora") View.VISIBLE else View.GONE
+        var isMapExpanded = false
+        val cardMap = view.findViewById<View>(R.id.cardMap)
+        val btnExpandMap = view.findViewById<android.widget.ImageButton>(R.id.btnExpandMap)
+        btnExpandMap.setOnClickListener {
+            isMapExpanded = !isMapExpanded
+            val params = cardMap.layoutParams
+            params.height = if (isMapExpanded) (500 * resources.displayMetrics.density).toInt() else (200 * resources.displayMetrics.density).toInt()
+            cardMap.layoutParams = params
+            tvSearchMap.visibility = if (isMapExpanded) View.VISIBLE else View.GONE
+            btnExpandMap.setImageResource(if (isMapExpanded) android.R.drawable.ic_menu_close_clear_cancel else android.R.drawable.ic_menu_zoom)
+        }
+
+        fun updateParkingOptions(isParkingMode: Boolean) {
+            val types = if (isParkingMode) arrayOf("Gratis", "All'ora", "Già Pagato") else arrayOf("Gratis", "All'ora", "Costo Fisso")
+            actvParkingType.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, types))
+
+            val currentText = actvParkingType.text.toString()
+            if (!types.contains(currentText)) {
+                actvParkingType.setText(types[0], false)
+                layoutHourlyCosts.visibility = View.GONE
+                layoutFixedCosts.visibility = View.GONE
+            } else {
+                layoutHourlyCosts.visibility = if (currentText == "All'ora") View.VISIBLE else View.GONE
+                layoutFixedCosts.visibility = if (currentText == "Già Pagato" || currentText == "Costo Fisso") View.VISIBLE else View.GONE
+                btnFixedEndTime.visibility = if (currentText == "Già Pagato" && isParkingMode) View.VISIBLE else View.GONE
+            }
+        }
+
+        actvParkingType.setOnItemClickListener { _, _, _, _ ->
+            val isParking = (toggleGroup.checkedButtonId == R.id.btnParkVehicle) || isVehicleLocked || isLocationLocked
+            updateParkingOptions(isParking)
+        }
+
+        btnFixedEndTime.setOnClickListener {
+            pickDateTime(System.currentTimeMillis()) { millis ->
+                fixedEndTimeMillis = millis
+                val format = java.text.SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.getDefault())
+                btnFixedEndTime.text = format.format(java.util.Date(millis))
+            }
         }
 
         toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked && !isVehicleLocked && !isLocationLocked) {
                 val isParking = (checkedId == R.id.btnParkVehicle)
-                layoutVehicle.visibility = if (isParking) View.VISIBLE else View.GONE
+                layoutVehicleSelection.visibility = if (isParking) View.VISIBLE else View.GONE
                 cbHeart.visibility = if (isParking) View.VISIBLE else View.GONE
+                updateParkingOptions(isParking)
             }
         }
 
-        // --- 5. LA MAGIA: GESTIONE DEGLI STATI DINAMICI (SENZA CAMPI GRIGI) ---
+        if (!isVehicleLocked && !isLocationLocked) updateParkingOptions(toggleGroup.checkedButtonId == R.id.btnParkVehicle)
 
-        // Referenze per nascondere i campi
-        val tilNotes = view.findViewById<View>(R.id.tilNotes)
-        val btnAddPhoto = view.findViewById<Button>(R.id.btnAddPhoto)
-
-        if (isVehicleLocked || isLocationLocked || isEditMode) {
-            // Niente opzioni "Solo preferito/Parcheggia", stiamo facendo un'azione specifica.
+        if (isVehicleLocked || isLocationLocked) {
             toggleGroup.visibility = View.GONE
             cbHeart.visibility = View.GONE
-            if (!isEditMode) layoutVehicle.visibility = View.VISIBLE
-        }
-
-        if (isEditMode) {
-            // MODALITÀ MODIFICA LUOGO -> Niente Toggle, mostro Elimina
-            btnDeleteLoc.visibility = View.VISIBLE
-            btnDeleteLoc.setOnClickListener {
-                editingLocationId?.let { id ->
-                    viewModel.removeSavedLocation(com.example.parkingmate.data.SavedLocation(id = id, name = "", latitude = 0.0, longitude = 0.0))
-                    Toast.makeText(requireContext(), "Luogo Eliminato", Toast.LENGTH_SHORT).show()
-                    dismiss()
-                }
-            }
-
-            // Pre-compilazione campi
-            etLocationName.setText(arguments?.getString("name", ""))
-            view.findViewById<TextInputEditText>(R.id.etNotes).setText(arguments?.getString("notes", ""))
-            actvParkingType.setText(arguments?.getString("type", ""), false)
-            if (arguments?.getString("type") == "All'ora") layoutHourlyCosts.visibility = View.VISIBLE
+            updateParkingOptions(true)
         }
 
         if (isVehicleLocked) {
-            // ARRIVO DA TAB VEICOLI -> ASSOCIAZIONE LUOGO
-            tilSelectVehicle.visibility = View.GONE
-            tvDisplayVehicle.visibility = View.VISIBLE
-            tvDisplayVehicle.text = "Veicolo: " + arguments?.getString("preselected_vehicle_name")
-
-            tilLocationInput.visibility = View.GONE
-            tilSelectExistingLocation.visibility = View.VISIBLE
+            layoutVehicleSelection.visibility = View.GONE
+            view.findViewById<TextView>(R.id.tvDisplayVehicle).apply { visibility = View.VISIBLE; text = "Veicolo: " + arguments?.getString("preselected_vehicle_name") }
+            view.findViewById<View>(R.id.tilLocationName).visibility = View.GONE
+            view.findViewById<View>(R.id.tilSelectExistingLocation).visibility = View.VISIBLE
             cardMap.visibility = View.GONE
 
-            // INIZIALMENTE NASCONDIAMO TUTTO FINCHÉ NON SCEGLIE IL LUOGO
+            val tilParkingType = view.findViewById<View>(R.id.tilParkingType)
+            val tilNotes = view.findViewById<View>(R.id.tilNotes)
+            val btnAddPhoto = view.findViewById<View>(R.id.btnAddPhoto)
+            val btnSaveEverything = view.findViewById<View>(R.id.btnSaveEverything)
             tilParkingType.visibility = View.GONE
             tilNotes.visibility = View.GONE
             btnAddPhoto.visibility = View.GONE
-            btnSaveEverything.visibility = View.GONE // Nascondiamo anche Salva!
+            btnSaveEverything.visibility = View.GONE
 
             viewLifecycleOwner.lifecycleScope.launch {
                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                     viewModel.savedLocationsList.collect { locations ->
-                        val names = locations.map { it.name }
-                        actvSelectLocation.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names))
+                        view.findViewById<AutoCompleteTextView>(R.id.actvSelectLocation).apply {
+                            setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, locations.map { it.name }))
+                            setOnItemClickListener { _, _, pos, _ ->
+                                val loc = locations[pos]
+                                selectedLatitude = loc.latitude
+                                selectedLongitude = loc.longitude
+                                actvParkingType.setText(loc.defaultType, false)
+                                updateParkingOptions(true)
 
-                        actvSelectLocation.setOnItemClickListener { _, _, pos, _ ->
-                            val loc = locations[pos]
-                            selectedLatitude = loc.latitude
-                            selectedLongitude = loc.longitude
-
-                            // AUTO-COMPILAZIONE DEI DATI DEL LUOGO SCELTO
-                            actvParkingType.setText(loc.defaultType, false)
-                            view.findViewById<TextInputEditText>(R.id.etNotes).setText(loc.notes ?: "")
-
-                            // ORA FACCIAMO APPARIRE I CAMPI PER FARLI VEDERE/MODIFICARE
-                            tilParkingType.visibility = View.VISIBLE
-                            tilNotes.visibility = View.VISIBLE
-                            btnAddPhoto.visibility = View.VISIBLE
-                            btnSaveEverything.visibility = View.VISIBLE
-
-                            layoutHourlyCosts.visibility = if (loc.defaultType == "All'ora") View.VISIBLE else View.GONE
+                                tilParkingType.visibility = View.VISIBLE
+                                tilNotes.visibility = View.VISIBLE
+                                btnAddPhoto.visibility = View.VISIBLE
+                                btnSaveEverything.visibility = View.VISIBLE
+                            }
                         }
                     }
                 }
@@ -255,95 +315,94 @@ class AddParkingFragment : DialogFragment() {
         }
 
         if (isLocationLocked) {
-            // ARRIVO DA TAB LUOGHI -> ASSOCIAZIONE VEICOLO
-            tilLocationInput.visibility = View.GONE
-            tvDisplayLocation.visibility = View.VISIBLE
-            tvDisplayLocation.text = "Luogo: " + arguments?.getString("name")
-            btnGetLocation.visibility = View.GONE
+            view.findViewById<View>(R.id.tilLocationName).visibility = View.GONE
+            view.findViewById<TextView>(R.id.tvDisplayLocationName).apply { visibility = View.VISIBLE; text = "Luogo: " + arguments?.getString("name") }
+            view.findViewById<Button>(R.id.btnGetLocation).visibility = View.GONE
+            layoutVehicleSelection.visibility = View.VISIBLE
 
-            tilParkingType.visibility = View.GONE
-            tvDisplayParkingType.visibility = View.VISIBLE
             val tType = arguments?.getString("type") ?: "Gratis"
-            tvDisplayParkingType.text = "Tariffa: $tType"
-            if (tType == "All'ora") layoutHourlyCosts.visibility = View.VISIBLE
+            view.findViewById<View>(R.id.tilParkingType).visibility = View.GONE
+            view.findViewById<TextView>(R.id.tvDisplayParkingType).apply { visibility = View.VISIBLE; text = "Tariffa: $tType" }
+            actvParkingType.setText(tType, false)
+            updateParkingOptions(true)
         }
 
-        // --- 6. CARICAMENTO VEICOLI ---
+        if (isEditMode) {
+            view.findViewById<Button>(R.id.btnDeleteLocation).apply {
+                visibility = View.VISIBLE
+                setOnClickListener {
+                    editingLocationId?.let { id ->
+                        viewModel.removeSavedLocation(com.example.parkingmate.data.SavedLocation(id = id, name = "", latitude = 0.0, longitude = 0.0))
+                        Toast.makeText(requireContext(), "Luogo Eliminato", Toast.LENGTH_SHORT).show()
+                        dismiss()
+                    }
+                }
+            }
+            view.findViewById<TextInputEditText>(R.id.etLocationName).setText(arguments?.getString("name", ""))
+            view.findViewById<TextInputEditText>(R.id.etNotes).setText(arguments?.getString("notes", ""))
+            actvParkingType.setText(arguments?.getString("type", ""), false)
+            updateParkingOptions(false)
+            toggleGroup.check(R.id.btnSaveFavoriteOnly)
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.vehiclesList.collect { vehicles ->
                     currentVehicles = vehicles
-                    val vehicleNames = vehicles.map { "${it.name} (${it.type})" }.toMutableList()
-                    actvVehicle.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, vehicleNames))
+                    view.findViewById<AutoCompleteTextView>(R.id.actvSelectVehicle).setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, vehicles.map { "${it.name} (${it.type})" }))
                 }
             }
         }
 
-        // --- 7. TASTO SALVA FINALE ---
-        btnSaveEverything.setOnClickListener {
-            // Se non c'è il toggle (perché nascosto), stiamo parcheggiando tranne nel caso della modifica!
-            val isParkMode = isVehicleLocked || isLocationLocked || (toggleGroup.visibility == View.VISIBLE && toggleGroup.checkedButtonId == R.id.btnParkVehicle)
-
-            val name = when {
-                isVehicleLocked -> actvSelectLocation.text.toString()
-                isLocationLocked -> arguments?.getString("name") ?: ""
-                else -> etLocationName.text.toString()
-            }
-
-            val type = actvParkingType.text.toString().takeIf { it.isNotEmpty() } ?: arguments?.getString("type") ?: "Gratis"
+        view.findViewById<Button>(R.id.btnSaveEverything).setOnClickListener {
+            val isParkMode = isVehicleLocked || isLocationLocked || toggleGroup.checkedButtonId == R.id.btnParkVehicle
+            val name = if (isVehicleLocked) view.findViewById<AutoCompleteTextView>(R.id.actvSelectLocation).text.toString() else if (isLocationLocked) arguments?.getString("name") ?: "" else view.findViewById<TextInputEditText>(R.id.etLocationName).text.toString()
+            val type = actvParkingType.text.toString()
             val notes = view.findViewById<TextInputEditText>(R.id.etNotes).text.toString()
 
-            if (name.isEmpty() || type.isEmpty()) {
-                Toast.makeText(requireContext(), "Compila Nome e Tipo di Tariffa!", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (selectedLatitude == 0.0 && !isVehicleLocked) {
-                Toast.makeText(requireContext(), "Seleziona una posizione sulla mappa!", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+            if (name.isEmpty() || type.isEmpty()) { Toast.makeText(requireContext(), "Compila Nome e Tipo!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+            if (selectedLatitude == 0.0 && !isVehicleLocked) { Toast.makeText(requireContext(), "Seleziona posizione!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+
+            val isHourly = type == "All'ora"
+            val costStr = if (isHourly) view.findViewById<TextInputEditText>(R.id.etCostInitial).text.toString() else view.findViewById<TextInputEditText>(R.id.etFixedCost).text.toString()
+            val initialCost = if (costStr.isNotEmpty()) costStr.toDouble() else 0.0
 
             if (isParkMode) {
-                // PARCHEGGIO
-                val selectedVehicleName = if (isVehicleLocked) arguments?.getString("preselected_vehicle_name") else actvVehicle.text.toString()
+                val selectedVehicleName = if (isVehicleLocked) arguments?.getString("preselected_vehicle_name") else view.findViewById<AutoCompleteTextView>(R.id.actvSelectVehicle).text.toString()
                 val vehicle = currentVehicles.find { "${it.name} (${it.type})" == selectedVehicleName }
+                if (vehicle == null) { Toast.makeText(requireContext(), "Seleziona un veicolo!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
 
-                if (vehicle == null) {
-                    Toast.makeText(requireContext(), "Seleziona un veicolo!", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-
-                val costStr = view.findViewById<TextInputEditText>(R.id.etCostInitial).text.toString()
-                val initialCost = if (costStr.isNotEmpty()) costStr.toDouble() else 0.0
-
-                viewModel.addParkingSession(vehicle.id, type, selectedLatitude, selectedLongitude, notes, savedPhotoPath, initialCost)
-
-                if (cbHeart.isChecked && cbHeart.visibility == View.VISIBLE) {
-                    viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes)
-                }
+                viewModel.addParkingSession(vehicle.id, type, selectedLatitude, selectedLongitude, notes, savedPhotoPath, initialCost, fixedEndTimeMillis)
+                if (cbHeart.isChecked && cbHeart.visibility == View.VISIBLE) viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes)
                 Toast.makeText(requireContext(), "Parcheggio Avviato!", Toast.LENGTH_SHORT).show()
-
             } else {
-                // SALVATAGGIO / MODIFICA LUOGO
-                if (isEditMode && editingLocationId != null) {
-                    viewModel.updateSavedLocation(editingLocationId!!, name, selectedLatitude, selectedLongitude, type, notes)
-                    Toast.makeText(requireContext(), "Luogo Modificato!", Toast.LENGTH_SHORT).show()
-                } else {
-                    viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes)
-                    Toast.makeText(requireContext(), "Luogo Salvato!", Toast.LENGTH_SHORT).show()
-                }
+                if (isEditMode && editingLocationId != null) viewModel.updateSavedLocation(editingLocationId!!, name, selectedLatitude, selectedLongitude, type, notes)
+                else viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes)
+                Toast.makeText(requireContext(), "Luogo Salvato!", Toast.LENGTH_SHORT).show()
             }
             dismiss()
         }
+    }
+
+    private fun pickDateTime(currentMillis: Long, onResult: (Long) -> Unit) {
+        val cal = Calendar.getInstance().apply { timeInMillis = currentMillis }
+        DatePickerDialog(requireContext(), { _, year, month, day ->
+            TimePickerDialog(requireContext(), { _, hour, minute ->
+                val newCal = Calendar.getInstance()
+                newCal.set(year, month, day, hour, minute)
+                onResult(newCal.timeInMillis)
+            }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true).show()
+        }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
     }
 
     @SuppressLint("MissingPermission")
     private fun getCurrentLocation() {
         fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
             if (location != null) {
-                val currentLatLng = LatLng(location.latitude, location.longitude)
+                val latLng = LatLng(location.latitude, location.longitude)
                 googleMap?.clear()
-                googleMap?.addMarker(MarkerOptions().position(currentLatLng).title("Sei qui"))
-                googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
+                googleMap?.addMarker(MarkerOptions().position(latLng))
+                googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
                 selectedLatitude = location.latitude
                 selectedLongitude = location.longitude
             }

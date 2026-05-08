@@ -63,7 +63,17 @@ class ParkMateViewModel(private val dao: AppDao) : ViewModel() {
 
     // --- SALVATAGGIO PARCHEGGIO (E COSTI) ---
     // (Per ora salviamo il costo iniziale base, poi per calcolare il totale servirà un calcolo matematico)
-    fun addParkingSession(vehicleId: Int, type: String, lat: Double, lng: Double, notes: String?, photoPath: String?, initialCost: Double) {
+    // --- SALVATAGGIO PARCHEGGIO (E COSTI/SCADENZA) ---
+    fun addParkingSession(
+        vehicleId: Int,
+        type: String,
+        lat: Double,
+        lng: Double,
+        notes: String?,
+        photoPath: String?,
+        initialCost: Double,
+        endTime: Long? = null // <--- ECCO IL PARAMETRO MANCANTE!
+    ) {
         viewModelScope.launch {
             val session = ParkingSession(
                 vehicleId = vehicleId,
@@ -74,7 +84,8 @@ class ParkMateViewModel(private val dao: AppDao) : ViewModel() {
                 note = notes,
                 photoPath = photoPath,
                 cost = initialCost,
-                isActive = true // È un parcheggio attivo!
+                isActive = true, // È un parcheggio attivo!
+                endTime = endTime // Salviamo la scadenza nel database
             )
             dao.insertSession(session)
         }
@@ -117,6 +128,12 @@ class ParkMateViewModel(private val dao: AppDao) : ViewModel() {
     fun updateParkingSession(session: ParkingSession) {
         viewModelScope.launch {
             dao.updateSession(session)
+        }
+    }
+
+    fun deleteParkingSession(session: ParkingSession) {
+        viewModelScope.launch {
+            dao.deleteSession(session)
         }
     }
 }

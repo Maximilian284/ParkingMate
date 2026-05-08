@@ -42,4 +42,7 @@ interface AppDao {
 
     @Update
     suspend fun updateSession(session: ParkingSession)
+
+    @Delete
+    suspend fun deleteSession(session: ParkingSession)
 }
