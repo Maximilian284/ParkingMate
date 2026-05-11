@@ -11,8 +11,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import android.app.Application
+import com.example.parkingmate.AlarmHelper
+import com.example.parkingmate.WorkManagerHelper
 
-class ParkMateViewModel(private val dao: AppDao) : ViewModel() {
+
+class ParkMateViewModel(private val application: Application, private val dao: AppDao) : ViewModel() {
 
     // 1. I DATI IN TEMPO REALE (StateFlow)
     // stateIn converte il Flow del Database in uno StateFlow perfetto per la UI moderna.
@@ -65,29 +69,29 @@ class ParkMateViewModel(private val dao: AppDao) : ViewModel() {
     // (Per ora salviamo il costo iniziale base, poi per calcolare il totale servirà un calcolo matematico)
     // --- SALVATAGGIO PARCHEGGIO (E COSTI/SCADENZA) ---
     fun addParkingSession(
-        vehicleId: Int,
-        type: String,
-        lat: Double,
-        lng: Double,
-        notes: String?,
-        photoPath: String?,
-        initialCost: Double,
-        endTime: Long? = null // <--- ECCO IL PARAMETRO MANCANTE!
+        vehicleId: Int, vehicleName: String, // Passiamo il nome del veicolo per la notifica!
+        name: String?, type: String,
+        lat: Double, lng: Double, notes: String?,
+        photoPath: String?, initialCost: Double, endTime: Long? = null
     ) {
         viewModelScope.launch {
             val session = ParkingSession(
-                vehicleId = vehicleId,
-                type = type,
-                startTime = System.currentTimeMillis(), // Orario di ORA
-                latitude = lat,
-                longitude = lng,
-                note = notes,
-                photoPath = photoPath,
-                cost = initialCost,
-                isActive = true, // È un parcheggio attivo!
-                endTime = endTime // Salviamo la scadenza nel database
+                vehicleId = vehicleId, name = name, type = type,
+                startTime = System.currentTimeMillis(), latitude = lat, longitude = lng,
+                note = notes, photoPath = photoPath, cost = initialCost, isActive = true, endTime = endTime
             )
-            dao.insertSession(session)
+
+            // Salviamo e recuperiamo l'ID generato dal database!
+            val newId = dao.insertSession(session).toInt()
+
+            // PROGRAMMIAMO LA NOTIFICA (TICKET FISSO)
+            val savedSession = session.copy(id = newId)
+            AlarmHelper.scheduleFixedTicketAlarms(application.applicationContext, savedSession, vehicleName)
+
+            // AVVIAMO IL WORKMANAGER (TICKET ORARIO)
+            if (type == "All'ora") {
+                WorkManagerHelper.startOrUpdatePeriodicWork(application.applicationContext)
+            }
         }
     }
 
@@ -114,14 +118,11 @@ class ParkMateViewModel(private val dao: AppDao) : ViewModel() {
     // --- TERMINA UN PARCHEGGIO ATTIVO ---
     fun finishParking(session: ParkingSession) {
         viewModelScope.launch {
-            val finishedSession = session.copy(
-                isActive = false, // Lo sposta nello storico!
-                endTime = System.currentTimeMillis() // Salva l'ora esatta di fine
-            )
+            val finishedSession = session.copy(isActive = false, endTime = System.currentTimeMillis())
             dao.updateSession(finishedSession)
 
-            // TODO (In futuro per la fase 4): Se serve tracciare la camminata (Effort Score),
-            // la faremo partire da qui!
+            // CANCELLIAMO LE NOTIFICHE SE TERMINIAMO PRIMA!
+            AlarmHelper.cancelAlarms(application.applicationContext, session.id)
         }
     }
 

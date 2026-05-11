@@ -24,6 +24,8 @@ class ParkingAdapter(
     private val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
 
     class ParkingViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+
+        val tvTitle: TextView = view.findViewById(R.id.tvDetailTitle)
         val tvVehicle: TextView = view.findViewById(R.id.tvParkingVehicle)
         val tvType: TextView = view.findViewById(R.id.tvParkingType)
         val tvStartTime: TextView = view.findViewById(R.id.tvStartTime)
@@ -42,6 +44,7 @@ class ParkingAdapter(
         val session = item.session
         val vehicle = item.vehicle
 
+        holder.tvTitle.text = "${session.name}"
         holder.tvVehicle.text = "${vehicle.name} (${vehicle.type})"
         holder.tvType.text = "Tariffa: ${session.type}"
 

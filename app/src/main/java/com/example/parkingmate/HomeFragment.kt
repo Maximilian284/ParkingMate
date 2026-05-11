@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -48,7 +47,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private val viewModel: ParkMateViewModel by activityViewModels {
         val db = AppDatabase.getDatabase(requireContext().applicationContext)
-        ParkMateViewModelFactory(db.appDao())
+        ParkMateViewModelFactory(requireActivity().application, db.appDao())
     }
 
     private var isMapMode = false
@@ -197,6 +196,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val vehicle = item.vehicle
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_parking_details, null)
 
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDetailTitle)
         val tvLocation = dialogView.findViewById<TextView>(R.id.tvDetailLocation)
         val tvVehicle = dialogView.findViewById<TextView>(R.id.tvDetailVehicle)
         val tvStartDate = dialogView.findViewById<TextView>(R.id.tvDetailStartDate)
@@ -204,6 +204,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val tvNotes = dialogView.findViewById<TextView>(R.id.tvDetailNotes)
         val ivPhoto = dialogView.findViewById<ImageView>(R.id.ivDetailPhoto)
 
+        val customTitle = "${session.name?.takeIf { it.isNotBlank() } ?: session.note?.takeIf {it.isNotBlank()} ?: "Informazioni Parcheggio"}"
+        tvTitle.text = customTitle
         tvVehicle.text = "Veicolo: ${vehicle.name} (${vehicle.type})"
         val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
         tvStartDate.text = "Inizio: ${dateFormat.format(session.startTime)}"

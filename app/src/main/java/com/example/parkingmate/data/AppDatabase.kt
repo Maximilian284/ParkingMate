@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Vehicle::class, SavedLocation::class, ParkingSession::class], version = 1)
+@Database(entities =[Vehicle::class, SavedLocation::class, ParkingSession::class], version = 3)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun appDao(): AppDao
 
@@ -18,15 +18,13 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "parkmate_database" // o "parkmate_db" a seconda di come lo avevi chiamato
+                    "parkmate_database"
                 )
-                    .fallbackToDestructiveMigration() // <--- AGGIUNGI QUESTA RIGA QUI!
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance
             }
         }
-
-
     }
 }

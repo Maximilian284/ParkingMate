@@ -21,7 +21,7 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
     // 1. Inizializza il ViewModel condiviso
     private val viewModel: ParkMateViewModel by activityViewModels {
         val db = AppDatabase.getDatabase(requireContext().applicationContext)
-        ParkMateViewModelFactory(db.appDao())
+        ParkMateViewModelFactory(requireActivity().application, db.appDao())
     }
 
     private lateinit var adapter: SavedLocationAdapter

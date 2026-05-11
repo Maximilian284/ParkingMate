@@ -55,7 +55,7 @@ class AddParkingFragment : DialogFragment() {
 
     private val viewModel: ParkMateViewModel by activityViewModels {
         val db = AppDatabase.getDatabase(requireContext().applicationContext)
-        ParkMateViewModelFactory(db.appDao())
+        ParkMateViewModelFactory(requireActivity().application, db.appDao())
     }
 
     private lateinit var mapView: MapView
@@ -372,7 +372,7 @@ class AddParkingFragment : DialogFragment() {
                 val vehicle = currentVehicles.find { "${it.name} (${it.type})" == selectedVehicleName }
                 if (vehicle == null) { Toast.makeText(requireContext(), "Seleziona un veicolo!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
 
-                viewModel.addParkingSession(vehicle.id, type, selectedLatitude, selectedLongitude, notes, savedPhotoPath, initialCost, fixedEndTimeMillis)
+                viewModel.addParkingSession(vehicle.id, vehicle.name, name, type, selectedLatitude, selectedLongitude, notes, savedPhotoPath, initialCost, fixedEndTimeMillis)
                 if (cbHeart.isChecked && cbHeart.visibility == View.VISIBLE) viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes)
                 Toast.makeText(requireContext(), "Parcheggio Avviato!", Toast.LENGTH_SHORT).show()
             } else {

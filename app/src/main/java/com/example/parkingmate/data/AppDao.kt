@@ -38,11 +38,14 @@ interface AppDao {
     fun getHistoryParkings(): Flow<List<SessionWithVehicle>>
 
     @Insert
-    suspend fun insertSession(session: ParkingSession)
+    suspend fun insertSession(session: ParkingSession): Long
 
     @Update
     suspend fun updateSession(session: ParkingSession)
 
     @Delete
     suspend fun deleteSession(session: ParkingSession)
+
+    @Query("UPDATE parking_sessions SET isActive = 0, endTime = :endTime WHERE id = :sessionId")
+    suspend fun terminateSessionById(sessionId: Int, endTime: Long)
 }

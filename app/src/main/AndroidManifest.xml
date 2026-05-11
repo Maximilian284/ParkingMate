@@ -2,10 +2,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Questi permessi ci serviranno dopo per la mappa vera -->
+    <!-- Permessi Mappa e Posizione -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Permesso vitale per il Geofencing (Posizione anche quando l'app è chiusa) -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Permessi Internet e Notifiche -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" /> <!-- Obbligatorio da Android 13 -->
+
+    <!-- Permessi per la scadenza esatta dei Ticket (AlarmManager) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> <!-- Per ripristinare gli allarmi se spegni il telefono -->
+
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
         android:allowBackup="true"
@@ -30,5 +41,7 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />
+
+        <receiver android:name=".AlarmReceiver" android:exported="false" />
     </application>
 </manifest>
