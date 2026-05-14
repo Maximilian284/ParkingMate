@@ -1,14 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".StatsFragment">
+    android:background="#121212"> <!-- Sfondo Nero Elegante -->
 
-    <!-- TODO: Update blank fragment layout -->
-    <TextView
+    <!-- CONTENITORE FULL SCREEN -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
+        android:layout_height="match_parent">
 
-</FrameLayout>
+        <!-- STATO 1: IL GRAFICO A BARRE -->
+        <com.github.mikephil.charting.charts.BarChart
+            android:id="@+id/barChartStats"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="80dp"
+            android:layout_marginBottom="20dp"/>
+
+        <!-- STATO 2: LA MAPPA TERMICA FULL SCREEN -->
+        <com.google.android.gms.maps.MapView
+            android:id="@+id/mapViewStats"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+    <!-- BOTTONI FLUTTUANTI (Sostituiscono i 3 punti) -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="32dp"
+        android:elevation="6dp">
+
+        <Button
+            android:id="@+id/btnFilterStats"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Filtro: Sempre"
+            app:icon="@android:drawable/ic_menu_sort_by_size"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/btnToggleView"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Mappa Termica"
+            app:icon="@android:drawable/ic_dialog_map" />
+    </LinearLayout>
+
+</RelativeLayout>

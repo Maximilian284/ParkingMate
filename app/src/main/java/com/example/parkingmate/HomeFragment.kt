@@ -204,7 +204,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val tvNotes = dialogView.findViewById<TextView>(R.id.tvDetailNotes)
         val ivPhoto = dialogView.findViewById<ImageView>(R.id.ivDetailPhoto)
 
-        val customTitle = "${session.name?.takeIf { it.isNotBlank() } ?: session.note?.takeIf {it.isNotBlank()} ?: "Informazioni Parcheggio"}"
+        val customTitle = "${session.locationName?.takeIf { it.isNotBlank() } ?: session.note?.takeIf {it.isNotBlank()} ?: "Informazioni Parcheggio"}"
         tvTitle.text = customTitle
         tvVehicle.text = "Veicolo: ${vehicle.name} (${vehicle.type})"
         val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())

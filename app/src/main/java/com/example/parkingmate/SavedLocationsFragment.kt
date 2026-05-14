@@ -49,7 +49,6 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
         adapter = SavedLocationAdapter(
             locations = emptyList(),
             onItemClick = { location ->
-                // TAP SULLA CARD: Apre il form con i campi BLOCCATI (Modalità Parcheggio)
                 val form = AddParkingFragment()
                 val b = Bundle()
                 b.putInt("location_id", location.id)
@@ -57,12 +56,14 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                 b.putDouble("lat", location.latitude)
                 b.putDouble("lng", location.longitude)
                 b.putString("type", location.defaultType)
-                b.putBoolean("is_location_locked", true) // <--- Istruzione per il form
+                b.putBoolean("is_location_locked", true)
+                b.putDouble("cost", location.defaultCost)
+                b.putDouble("initialCost", location.initialCost)
+                b.putDouble("maxCost", location.maxCost)
                 form.arguments = b
                 form.show(childFragmentManager, "AddParkingDialog")
             },
             onEditClick = { location ->
-                // TAP SULLA MATITA: Apre il form tutto modificabile + tasto ELIMINA
                 val form = AddParkingFragment()
                 val b = Bundle()
                 b.putInt("location_id", location.id)
@@ -71,9 +72,32 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                 b.putDouble("lng", location.longitude)
                 b.putString("type", location.defaultType)
                 b.putString("notes", location.notes)
-                b.putBoolean("is_edit_mode", true) // <--- Istruzione per mostrare il tasto ELIMINA
+                b.putBoolean("is_edit_mode", true)
+                b.putDouble("cost", location.defaultCost)
+                b.putDouble("initialCost", location.initialCost)
+                b.putDouble("maxCost", location.maxCost)
                 form.arguments = b
                 form.show(childFragmentManager, "AddParkingDialog")
+            },
+            // --- NUOVA PARTE: CLICK SULL'INTERRUTTORE GEOFENCE ---
+            onGeofenceToggle = { location, isChecked ->
+                val prefs = requireContext().getSharedPreferences("ParkingMatePrefs", android.content.Context.MODE_PRIVATE)
+                val isGlobalEnabled = prefs.getBoolean("geofence_global_enabled", false)
+
+                if (!isGlobalEnabled && isChecked) {
+                    android.widget.Toast.makeText(requireContext(), "Attiva prima il Geofencing Globale nelle Impostazioni!", android.widget.Toast.LENGTH_LONG).show()
+                    adapter.notifyDataSetChanged() // Riporta l'interruttore su OFF visivamente
+                } else {
+                    // Salviamo il nuovo stato (acceso/spento) nel Database!
+                    viewModel.updateSavedLocation(location.id, location.name, location.latitude, location.longitude, location.defaultType, location.notes, isChecked, location.defaultCost)
+
+                    // CHIAMIAMO IL MOTORE GEOFENCE
+                    if (isChecked) {
+                        GeofenceHelper.addGeofence(requireContext(), location)
+                    } else {
+                        GeofenceHelper.removeGeofence(requireContext(), location.id)
+                    }
+                }
             }
         )
         rv.layoutManager = LinearLayoutManager(requireContext())

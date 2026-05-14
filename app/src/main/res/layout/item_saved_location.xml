@@ -44,13 +44,20 @@
                 android:textColor="#666666" />
         </LinearLayout>
 
+        <!-- NUOVO: INTERRUTTORE GEOFENCE -->
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchGeofence"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp" />
+
         <ImageButton
             android:id="@+id/btnEditLocation"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_edit"
-            app:tint="?attr/colorOnSurface" /> <!-- Questo lo rende coerente col tema -->
+            app:tint="?attr/colorOnSurface" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

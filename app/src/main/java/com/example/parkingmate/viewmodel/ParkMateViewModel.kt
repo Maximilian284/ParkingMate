@@ -58,40 +58,10 @@ class ParkMateViewModel(private val application: Application, private val dao: A
     }
 
     // --- SALVATAGGIO LUOGO PREFERITO ---
-    fun addSavedLocation(name: String, lat: Double, lng: Double, type: String, notes: String?) {
+    fun addSavedLocation(name: String, lat: Double, lng: Double, type: String, notes: String?, cost: Double, initialCost: Double = 0.0, maxCost: Double = 0.0) {
         viewModelScope.launch {
-            val location = SavedLocation(name = name, latitude = lat, longitude = lng, defaultType = type, notes = notes)
+            val location = SavedLocation(name = name, latitude = lat, longitude = lng, defaultType = type, notes = notes, defaultCost = cost, initialCost = initialCost, maxCost = maxCost)
             dao.insertLocation(location)
-        }
-    }
-
-    // --- SALVATAGGIO PARCHEGGIO (E COSTI) ---
-    // (Per ora salviamo il costo iniziale base, poi per calcolare il totale servirà un calcolo matematico)
-    // --- SALVATAGGIO PARCHEGGIO (E COSTI/SCADENZA) ---
-    fun addParkingSession(
-        vehicleId: Int, vehicleName: String, // Passiamo il nome del veicolo per la notifica!
-        name: String?, type: String,
-        lat: Double, lng: Double, notes: String?,
-        photoPath: String?, initialCost: Double, endTime: Long? = null
-    ) {
-        viewModelScope.launch {
-            val session = ParkingSession(
-                vehicleId = vehicleId, name = name, type = type,
-                startTime = System.currentTimeMillis(), latitude = lat, longitude = lng,
-                note = notes, photoPath = photoPath, cost = initialCost, isActive = true, endTime = endTime
-            )
-
-            // Salviamo e recuperiamo l'ID generato dal database!
-            val newId = dao.insertSession(session).toInt()
-
-            // PROGRAMMIAMO LA NOTIFICA (TICKET FISSO)
-            val savedSession = session.copy(id = newId)
-            AlarmHelper.scheduleFixedTicketAlarms(application.applicationContext, savedSession, vehicleName)
-
-            // AVVIAMO IL WORKMANAGER (TICKET ORARIO)
-            if (type == "All'ora") {
-                WorkManagerHelper.startOrUpdatePeriodicWork(application.applicationContext)
-            }
         }
     }
 
@@ -108,9 +78,29 @@ class ParkMateViewModel(private val application: Application, private val dao: A
         }
     }
 
-    fun updateSavedLocation(id: Int, name: String, lat: Double, lng: Double, type: String, notes: String?) {
+    fun addParkingSession(
+        vehicleId: Int, vehicleName: String, locationName: String?, type: String,
+        lat: Double, lng: Double, notes: String?, photoPath: String?,
+        cost: Double, initialCost: Double = 0.0, maxCost: Double = 0.0, endTime: Long? = null
+    ) {
         viewModelScope.launch {
-            val location = SavedLocation(id = id, name = name, latitude = lat, longitude = lng, defaultType = type, notes = notes)
+            val session = ParkingSession(
+                vehicleId = vehicleId, locationName = locationName, type = type,
+                startTime = System.currentTimeMillis(), latitude = lat, longitude = lng,
+                note = notes, photoPath = photoPath,
+                cost = cost, initialCost = initialCost, maxCost = maxCost, // <--- Salvataggio!
+                isActive = true, endTime = endTime
+            )
+            val newId = dao.insertSession(session).toInt()
+            val savedSession = session.copy(id = newId)
+            AlarmHelper.scheduleFixedTicketAlarms(application.applicationContext, savedSession, vehicleName)
+            if (type == "All'ora") WorkManagerHelper.startOrUpdatePeriodicWork(application.applicationContext)
+        }
+    }
+
+    fun updateSavedLocation(id: Int, name: String, lat: Double, lng: Double, type: String, notes: String?, isGeofenceEnabled: Boolean = false, cost: Double, initialCost: Double = 0.0, maxCost: Double = 0.0) {
+        viewModelScope.launch {
+            val location = SavedLocation(id = id, name = name, latitude = lat, longitude = lng, defaultType = type, notes = notes, isGeofenceEnabled = isGeofenceEnabled, defaultCost = cost, initialCost = initialCost, maxCost = maxCost)
             dao.updateLocation(location)
         }
     }

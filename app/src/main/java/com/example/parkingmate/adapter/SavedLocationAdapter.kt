@@ -8,17 +8,20 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.parkingmate.R
 import com.example.parkingmate.data.SavedLocation
+import com.google.android.material.materialswitch.MaterialSwitch
 
 class SavedLocationAdapter(
     private var locations: List<SavedLocation>,
-    private val onItemClick: (SavedLocation) -> Unit, // <--- Per parcheggiare
-    private val onEditClick: (SavedLocation) -> Unit   // <--- Per modificare/eliminare
+    private val onItemClick: (SavedLocation) -> Unit,
+    private val onEditClick: (SavedLocation) -> Unit,
+    private val onGeofenceToggle: (SavedLocation, Boolean) -> Unit
 ) : RecyclerView.Adapter<SavedLocationAdapter.LocationViewHolder>() {
 
     class LocationViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvName: TextView = view.findViewById(R.id.tvLocationName)
         val tvType: TextView = view.findViewById(R.id.tvLocationType)
         val btnEdit: ImageButton = view.findViewById(R.id.btnEditLocation)
+        val switchGeofence: MaterialSwitch = view.findViewById(R.id.switchGeofence) // <--- NUOVO
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LocationViewHolder {
@@ -29,10 +32,18 @@ class SavedLocationAdapter(
     override fun onBindViewHolder(holder: LocationViewHolder, position: Int) {
         val location = locations[position]
         holder.tvName.text = location.name
-        holder.tvType.text = location.defaultType
+        holder.tvType.text = "Tariffa: ${location.defaultType}"
 
-        holder.btnEdit.setOnClickListener { onEditClick(location) }
+        // Disabilitiamo temporaneamente il listener per non farlo scattare mentre ricarichiamo i dati
+        holder.switchGeofence.setOnCheckedChangeListener(null)
+        holder.switchGeofence.isChecked = location.isGeofenceEnabled
+
+        holder.switchGeofence.setOnCheckedChangeListener { _, isChecked ->
+            onGeofenceToggle(location, isChecked)
+        }
+
         holder.itemView.setOnClickListener { onItemClick(location) }
+        holder.btnEdit.setOnClickListener { onEditClick(location) }
     }
 
     override fun getItemCount() = locations.size

@@ -4,8 +4,10 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -44,12 +46,10 @@ import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Calendar
-import android.content.pm.PackageManager
-import android.content.pm.ApplicationInfo
-import android.os.Build
 
 class AddParkingFragment : DialogFragment() {
 
@@ -69,7 +69,6 @@ class AddParkingFragment : DialogFragment() {
     private var editingLocationId: Int? = null
     private var fixedEndTimeMillis: Long? = null
 
-    // --- LA RICERCA CON PLACES ---
     private val autocompleteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         when (result.resultCode) {
             android.app.Activity.RESULT_OK -> {
@@ -83,12 +82,6 @@ class AddParkingFragment : DialogFragment() {
                         selectedLongitude = latLng.longitude
                         view?.findViewById<TextView>(R.id.tvSearchMap)?.text = " ${place.name}"
                     }
-                }
-            }
-            AutocompleteActivity.RESULT_ERROR -> {
-                result.data?.let { data ->
-                    val status = Autocomplete.getStatusFromIntent(data)
-                    Toast.makeText(requireContext(), "Errore API: ${status.statusMessage}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -122,34 +115,19 @@ class AddParkingFragment : DialogFragment() {
 
         view.findViewById<MaterialToolbar>(R.id.toolbarAddParking).setNavigationOnClickListener { dismiss() }
 
-        // Inizializza Places leggendo la chiave dal Manifest
         if (!Places.isInitialized()) {
             try {
-                // Legge i metadati del Manifest in modo sicuro per il 2026
                 val appInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    requireContext().packageManager.getApplicationInfo(
-                        requireContext().packageName,
-                        PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong())
-                    )
+                    requireContext().packageManager.getApplicationInfo(requireContext().packageName, PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()))
                 } else {
                     @Suppress("DEPRECATION")
-                    requireContext().packageManager.getApplicationInfo(
-                        requireContext().packageName,
-                        PackageManager.GET_META_DATA
-                    )
+                    requireContext().packageManager.getApplicationInfo(requireContext().packageName, PackageManager.GET_META_DATA)
                 }
-
                 val apiKey = appInfo.metaData.getString("com.google.android.geo.API_KEY")
-
                 if (apiKey != null && apiKey.startsWith("AIza")) {
                     Places.initialize(requireContext().applicationContext, apiKey)
-                } else {
-                    // Se non trova la chiave, lo segnala nel Logcat
-                    android.util.Log.e("ParkMate", "ERRORE: Chiave API non trovata nel Manifest!")
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
 
         val isVehicleLocked = arguments?.getBoolean("is_vehicle_locked", false) ?: false
@@ -192,7 +170,6 @@ class AddParkingFragment : DialogFragment() {
             }
         }
 
-        // QUESTA RIGA BLOCCA LO SCROLL DELLA PAGINA IN MODO NATIVO QUANDO TOCCHI LA MAPPA!
         mapView.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> scrollView.requestDisallowInterceptTouchEvent(true)
@@ -212,8 +189,6 @@ class AddParkingFragment : DialogFragment() {
                 val fields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG)
                 val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.OVERLAY, fields).build(requireContext())
                 autocompleteLauncher.launch(intent)
-            } else {
-                Toast.makeText(requireContext(), "Places API non pronta.", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -230,19 +205,23 @@ class AddParkingFragment : DialogFragment() {
         }
 
         fun updateParkingOptions(isParkingMode: Boolean) {
-            val types = if (isParkingMode) arrayOf("Gratis", "All'ora", "Già Pagato") else arrayOf("Gratis", "All'ora", "Costo Fisso")
+            val types = arrayOf("Gratis", "All'ora", "Costo Fisso")
             actvParkingType.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, types))
 
-            val currentText = actvParkingType.text.toString()
+            var currentText = actvParkingType.text.toString()
+            if (currentText == "Già Pagato") {
+                currentText = "Costo Fisso"
+                actvParkingType.setText(currentText, false)
+            }
+
             if (!types.contains(currentText)) {
                 actvParkingType.setText(types[0], false)
-                layoutHourlyCosts.visibility = View.GONE
-                layoutFixedCosts.visibility = View.GONE
-            } else {
-                layoutHourlyCosts.visibility = if (currentText == "All'ora") View.VISIBLE else View.GONE
-                layoutFixedCosts.visibility = if (currentText == "Già Pagato" || currentText == "Costo Fisso") View.VISIBLE else View.GONE
-                btnFixedEndTime.visibility = if (currentText == "Già Pagato" && isParkingMode) View.VISIBLE else View.GONE
+                currentText = types[0]
             }
+
+            layoutHourlyCosts.visibility = if (currentText == "All'ora") View.VISIBLE else View.GONE
+            layoutFixedCosts.visibility = if (currentText == "Costo Fisso") View.VISIBLE else View.GONE
+            btnFixedEndTime.visibility = if (currentText == "Costo Fisso" && isParkingMode) View.VISIBLE else View.GONE
         }
 
         actvParkingType.setOnItemClickListener { _, _, _, _ ->
@@ -282,8 +261,9 @@ class AddParkingFragment : DialogFragment() {
             view.findViewById<View>(R.id.tilSelectExistingLocation).visibility = View.VISIBLE
             cardMap.visibility = View.GONE
 
-            val tilParkingType = view.findViewById<View>(R.id.tilParkingType)
-            val tilNotes = view.findViewById<View>(R.id.tilNotes)
+            val tilParkingType = view.findViewById<TextInputLayout>(R.id.tilParkingType)
+            val tilNotes = view.findViewById<TextInputLayout>(R.id.tilNotes)
+            val etNotes = view.findViewById<TextInputEditText>(R.id.etNotes)
             val btnAddPhoto = view.findViewById<View>(R.id.btnAddPhoto)
             val btnSaveEverything = view.findViewById<View>(R.id.btnSaveEverything)
             tilParkingType.visibility = View.GONE
@@ -302,6 +282,38 @@ class AddParkingFragment : DialogFragment() {
                                 selectedLongitude = loc.longitude
                                 actvParkingType.setText(loc.defaultType, false)
                                 updateParkingOptions(true)
+
+                                tilParkingType.isEnabled = false
+                                etNotes.setText(loc.notes ?: "")
+                                tilNotes.isEnabled = false
+
+                                // --- FIX: COMPILIAMO E BLOCCHIAMO TUTTI I COSTI ---
+                                val etHourly = view.findViewById<TextInputEditText>(R.id.etCostHourly)
+                                val etInitial = view.findViewById<TextInputEditText>(R.id.etCostInitial)
+                                val etMax = view.findViewById<TextInputEditText>(R.id.etCostMax)
+                                val etFixed = view.findViewById<TextInputEditText>(R.id.etFixedCost)
+
+                                etHourly.text?.clear()
+                                etInitial.text?.clear()
+                                etMax.text?.clear()
+                                etFixed.text?.clear()
+
+                                etHourly.isEnabled = true
+                                etInitial.isEnabled = true
+                                etMax.isEnabled = true
+                                etFixed.isEnabled = true
+
+                                if (loc.defaultType == "All'ora") {
+                                    if (loc.defaultCost > 0) etHourly.setText(loc.defaultCost.toString())
+                                    if (loc.initialCost > 0) etInitial.setText(loc.initialCost.toString())
+                                    if (loc.maxCost > 0) etMax.setText(loc.maxCost.toString())
+                                    etHourly.isEnabled = false
+                                    etInitial.isEnabled = false
+                                    etMax.isEnabled = false
+                                } else if (loc.defaultType == "Costo Fisso" || loc.defaultType == "Già Pagato") {
+                                    if (loc.defaultCost > 0) etFixed.setText(loc.defaultCost.toString())
+                                    etFixed.isEnabled = false
+                                }
 
                                 tilParkingType.visibility = View.VISIBLE
                                 tilNotes.visibility = View.VISIBLE
@@ -325,6 +337,29 @@ class AddParkingFragment : DialogFragment() {
             view.findViewById<TextView>(R.id.tvDisplayParkingType).apply { visibility = View.VISIBLE; text = "Tariffa: $tType" }
             actvParkingType.setText(tType, false)
             updateParkingOptions(true)
+
+            // --- FIX: LEGGERE E BLOCCARE TUTTI I COSTI QUANDO ARRIVI DA TAB LUOGHI ---
+            val tCost = arguments?.getDouble("cost", 0.0) ?: 0.0
+            val tInitial = arguments?.getDouble("initialCost", 0.0) ?: 0.0
+            val tMax = arguments?.getDouble("maxCost", 0.0) ?: 0.0
+
+            if (tType == "All'ora") {
+                val etHourly = view.findViewById<TextInputEditText>(R.id.etCostHourly)
+                val etInitial = view.findViewById<TextInputEditText>(R.id.etCostInitial)
+                val etMax = view.findViewById<TextInputEditText>(R.id.etCostMax)
+
+                if (tCost > 0) etHourly.setText(tCost.toString())
+                if (tInitial > 0) etInitial.setText(tInitial.toString())
+                if (tMax > 0) etMax.setText(tMax.toString())
+
+                etHourly.isEnabled = false
+                etInitial.isEnabled = false
+                etMax.isEnabled = false
+            } else if (tType == "Costo Fisso" || tType == "Già Pagato") {
+                val etFixed = view.findViewById<TextInputEditText>(R.id.etFixedCost)
+                if (tCost > 0) etFixed.setText(tCost.toString())
+                etFixed.isEnabled = false
+            }
         }
 
         if (isEditMode) {
@@ -363,21 +398,44 @@ class AddParkingFragment : DialogFragment() {
             if (name.isEmpty() || type.isEmpty()) { Toast.makeText(requireContext(), "Compila Nome e Tipo!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             if (selectedLatitude == 0.0 && !isVehicleLocked) { Toast.makeText(requireContext(), "Seleziona posizione!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
 
-            val isHourly = type == "All'ora"
-            val costStr = if (isHourly) view.findViewById<TextInputEditText>(R.id.etCostInitial).text.toString() else view.findViewById<TextInputEditText>(R.id.etFixedCost).text.toString()
-            val initialCost = if (costStr.isNotEmpty()) costStr.toDouble() else 0.0
+            // --- LETTURA TOTALE DI TUTTI E 3 I CAMPI (A PROVA DI VIRGOLA) ---
+            val isHourly = (type == "All'ora")
+
+            val costStrHourly = view.findViewById<TextInputEditText>(R.id.etCostHourly).text.toString().replace(",", ".")
+            val costStrInitial = view.findViewById<TextInputEditText>(R.id.etCostInitial).text.toString().replace(",", ".")
+            val costStrMax = view.findViewById<TextInputEditText>(R.id.etCostMax).text.toString().replace(",", ".")
+            val costStrFixed = view.findViewById<TextInputEditText>(R.id.etFixedCost).text.toString().replace(",", ".")
+
+            var finalCost = 0.0
+            var finalInitial = 0.0
+            var finalMax = 0.0
+
+            if (isHourly) {
+                finalCost = costStrHourly.toDoubleOrNull() ?: 0.0
+                finalInitial = costStrInitial.toDoubleOrNull() ?: 0.0
+                finalMax = costStrMax.toDoubleOrNull() ?: 0.0
+            } else if (type == "Costo Fisso" || type == "Già Pagato") {
+                finalCost = costStrFixed.toDoubleOrNull() ?: 0.0
+            }
 
             if (isParkMode) {
                 val selectedVehicleName = if (isVehicleLocked) arguments?.getString("preselected_vehicle_name") else view.findViewById<AutoCompleteTextView>(R.id.actvSelectVehicle).text.toString()
                 val vehicle = currentVehicles.find { "${it.name} (${it.type})" == selectedVehicleName }
                 if (vehicle == null) { Toast.makeText(requireContext(), "Seleziona un veicolo!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
 
-                viewModel.addParkingSession(vehicle.id, vehicle.name, name, type, selectedLatitude, selectedLongitude, notes, savedPhotoPath, initialCost, fixedEndTimeMillis)
-                if (cbHeart.isChecked && cbHeart.visibility == View.VISIBLE) viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes)
+                // Salviamo tutto nel database del parcheggio!
+                viewModel.addParkingSession(vehicle.id, vehicle.name, name, type, selectedLatitude, selectedLongitude, notes, savedPhotoPath, finalCost, finalInitial, finalMax, fixedEndTimeMillis)
+
+                if (cbHeart.isChecked && cbHeart.visibility == View.VISIBLE) {
+                    viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes, finalCost, finalInitial, finalMax)
+                }
                 Toast.makeText(requireContext(), "Parcheggio Avviato!", Toast.LENGTH_SHORT).show()
             } else {
-                if (isEditMode && editingLocationId != null) viewModel.updateSavedLocation(editingLocationId!!, name, selectedLatitude, selectedLongitude, type, notes)
-                else viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes)
+                if (isEditMode && editingLocationId != null) {
+                    viewModel.updateSavedLocation(editingLocationId!!, name, selectedLatitude, selectedLongitude, type, notes, false, finalCost, finalInitial, finalMax)
+                } else {
+                    viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes, finalCost, finalInitial, finalMax)
+                }
                 Toast.makeText(requireContext(), "Luogo Salvato!", Toast.LENGTH_SHORT).show()
             }
             dismiss()

@@ -44,9 +44,15 @@ class ParkingAdapter(
         val session = item.session
         val vehicle = item.vehicle
 
-        holder.tvTitle.text = "${session.name}"
+        holder.tvTitle.text = "${session.locationName}"
         holder.tvVehicle.text = "${vehicle.name} (${vehicle.type})"
-        holder.tvType.text = "Tariffa: ${session.type}"
+        val costFormatted = if (session.cost > 0) {
+            String.format(java.util.Locale.getDefault(), " (%.2f €)", session.cost)
+        } else {
+            ""
+        }
+        val typeTranslated = if (session.type == "Free") "Gratis" else session.type
+        holder.tvType.text = "Tariffa: $typeTranslated$costFormatted"
 
         val startDate = Date(session.startTime)
         holder.tvStartTime.text = "Inizio:\n${dateFormat.format(startDate)}"
