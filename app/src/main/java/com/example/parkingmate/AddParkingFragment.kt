@@ -50,6 +50,9 @@ import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Calendar
+import android.content.Intent
+import androidx.core.content.ContextCompat
+import android.content.Context
 
 class AddParkingFragment : DialogFragment() {
 
@@ -158,7 +161,7 @@ class AddParkingFragment : DialogFragment() {
                 googleMap?.addMarker(MarkerOptions().position(latLng).title("Luogo"))
                 googleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
             }
-            if (!isLocationLocked) {
+            if (!isLocationLocked && !isEditMode) {
                 googleMap?.setOnMapClickListener { latLng ->
                     googleMap?.clear()
                     googleMap?.addMarker(MarkerOptions().position(latLng).title("Selezionato"))
@@ -170,12 +173,18 @@ class AddParkingFragment : DialogFragment() {
             }
         }
 
-        mapView.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> scrollView.requestDisallowInterceptTouchEvent(true)
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> scrollView.requestDisallowInterceptTouchEvent(false)
+        val mapOverlay = view.findViewById<View>(R.id.mapTransparentOverlay)
+        mapOverlay?.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    scrollView.requestDisallowInterceptTouchEvent(true)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    scrollView.requestDisallowInterceptTouchEvent(false)
+                }
             }
-            false
+            mapView.dispatchTouchEvent(event)
+            true
         }
 
         view.findViewById<Button>(R.id.btnGetLocation).setOnClickListener {
@@ -195,6 +204,10 @@ class AddParkingFragment : DialogFragment() {
         var isMapExpanded = false
         val cardMap = view.findViewById<View>(R.id.cardMap)
         val btnExpandMap = view.findViewById<android.widget.ImageButton>(R.id.btnExpandMap)
+
+        if (isLocationLocked) {
+            btnExpandMap.visibility = View.GONE
+        }
         btnExpandMap.setOnClickListener {
             isMapExpanded = !isMapExpanded
             val params = cardMap.layoutParams
@@ -246,7 +259,12 @@ class AddParkingFragment : DialogFragment() {
             }
         }
 
-        if (!isVehicleLocked && !isLocationLocked) updateParkingOptions(toggleGroup.checkedButtonId == R.id.btnParkVehicle)
+        if (!isVehicleLocked && !isLocationLocked) {
+            val isParkingModeNow = (toggleGroup.checkedButtonId == R.id.btnParkVehicle)
+            layoutVehicleSelection.visibility = if (isParkingModeNow) View.VISIBLE else View.GONE
+            cbHeart.visibility = if (isParkingModeNow) View.VISIBLE else View.GONE
+            updateParkingOptions(isParkingModeNow)
+        }
 
         if (isVehicleLocked || isLocationLocked) {
             toggleGroup.visibility = View.GONE
@@ -287,7 +305,6 @@ class AddParkingFragment : DialogFragment() {
                                 etNotes.setText(loc.notes ?: "")
                                 tilNotes.isEnabled = false
 
-                                // --- FIX: COMPILIAMO E BLOCCHIAMO TUTTI I COSTI ---
                                 val etHourly = view.findViewById<TextInputEditText>(R.id.etCostHourly)
                                 val etInitial = view.findViewById<TextInputEditText>(R.id.etCostInitial)
                                 val etMax = view.findViewById<TextInputEditText>(R.id.etCostMax)
@@ -338,7 +355,6 @@ class AddParkingFragment : DialogFragment() {
             actvParkingType.setText(tType, false)
             updateParkingOptions(true)
 
-            // --- FIX: LEGGERE E BLOCCARE TUTTI I COSTI QUANDO ARRIVI DA TAB LUOGHI ---
             val tCost = arguments?.getDouble("cost", 0.0) ?: 0.0
             val tInitial = arguments?.getDouble("initialCost", 0.0) ?: 0.0
             val tMax = arguments?.getDouble("maxCost", 0.0) ?: 0.0
@@ -398,7 +414,6 @@ class AddParkingFragment : DialogFragment() {
             if (name.isEmpty() || type.isEmpty()) { Toast.makeText(requireContext(), "Compila Nome e Tipo!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             if (selectedLatitude == 0.0 && !isVehicleLocked) { Toast.makeText(requireContext(), "Seleziona posizione!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
 
-            // --- LETTURA TOTALE DI TUTTI E 3 I CAMPI (A PROVA DI VIRGOLA) ---
             val isHourly = (type == "All'ora")
 
             val costStrHourly = view.findViewById<TextInputEditText>(R.id.etCostHourly).text.toString().replace(",", ".")
@@ -423,13 +438,60 @@ class AddParkingFragment : DialogFragment() {
                 val vehicle = currentVehicles.find { "${it.name} (${it.type})" == selectedVehicleName }
                 if (vehicle == null) { Toast.makeText(requireContext(), "Seleziona un veicolo!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
 
-                // Salviamo tutto nel database del parcheggio!
-                viewModel.addParkingSession(vehicle.id, vehicle.name, name, type, selectedLatitude, selectedLongitude, notes, savedPhotoPath, finalCost, finalInitial, finalMax, fixedEndTimeMillis)
+                // --- FUNZIONE CHE SALVA E DECIDE SE AVVIARE IL TRACKER ---
+                val saveAndTrackLogic = { shouldTrack: Boolean, feedbackMsg: String ->
+                    viewModel.addParkingSession(vehicle.id, vehicle.name, name, type, selectedLatitude, selectedLongitude, notes, savedPhotoPath, finalCost, finalInitial, finalMax, fixedEndTimeMillis) { newId ->
 
-                if (cbHeart.isChecked && cbHeart.visibility == View.VISIBLE) {
-                    viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes, finalCost, finalInitial, finalMax)
+                        if (shouldTrack) {
+                            startWalkingService(newId)
+                            Toast.makeText(requireContext(), "Parcheggio Avviato! Tracciamento camminata in corso...", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(requireContext(), feedbackMsg, Toast.LENGTH_LONG).show()
+                        }
+
+                        if (cbHeart.isChecked && cbHeart.visibility == View.VISIBLE) {
+                            viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes, finalCost, finalInitial, finalMax)
+                        }
+                        dismiss()
+                    }
                 }
-                Toast.makeText(requireContext(), "Parcheggio Avviato!", Toast.LENGTH_SHORT).show()
+
+                // --- LETTURA DEL TASTO IMPOSTAZIONI ---
+                val prefs = requireContext().getSharedPreferences("ParkingMatePrefs", Context.MODE_PRIVATE)
+                val isEffortGloballyEnabled = prefs.getBoolean("effort_global_enabled", true)
+
+                // LOGICA: Se lo sforzo è disattivato nelle impostazioni globali...
+                if (!isEffortGloballyEnabled) {
+                    saveAndTrackLogic(false, "Parcheggio salvato! (Tracciamento sforzo disabilitato in Impostazioni)")
+                }
+                // Altrimenti, se abbiamo il permesso GPS... calcoliamo la distanza
+                else if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    fusedLocationClient.lastLocation.addOnCompleteListener { task ->
+                        val currentLocation = task.result
+                        if (currentLocation != null) {
+                            val distanceResults = FloatArray(1)
+                            Location.distanceBetween(
+                                currentLocation.latitude, currentLocation.longitude,
+                                selectedLatitude, selectedLongitude,
+                                distanceResults
+                            )
+                            val distanceInMeters = distanceResults[0]
+
+                            if (distanceInMeters <= 250f) {
+                                saveAndTrackLogic(true, "") // Traccia!
+                            } else {
+                                saveAndTrackLogic(false, "Parcheggio salvato! (Sei troppo lontano dall'auto per il tracciamento)")
+                            }
+                        } else {
+                            saveAndTrackLogic(false, "Parcheggio salvato! (GPS debole, sforzo non tracciato)")
+                        }
+                    }
+                }
+                // Altrimenti non possiamo tracciare perché manca il permesso...
+                else {
+                    saveAndTrackLogic(false, "Parcheggio salvato! (Permessi GPS mancanti)")
+                }
+
             } else {
                 if (isEditMode && editingLocationId != null) {
                     viewModel.updateSavedLocation(editingLocationId!!, name, selectedLatitude, selectedLongitude, type, notes, false, finalCost, finalInitial, finalMax)
@@ -437,8 +499,8 @@ class AddParkingFragment : DialogFragment() {
                     viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes, finalCost, finalInitial, finalMax)
                 }
                 Toast.makeText(requireContext(), "Luogo Salvato!", Toast.LENGTH_SHORT).show()
+                dismiss()
             }
-            dismiss()
         }
     }
 
@@ -464,6 +526,27 @@ class AddParkingFragment : DialogFragment() {
                 selectedLatitude = location.latitude
                 selectedLongitude = location.longitude
             }
+        }
+    }
+
+    private fun startWalkingService(sessionId: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+
+            // Se non ha il permesso, glielo chiediamo e partiamo
+            requestPermissions(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION, Manifest.permission.ACCESS_FINE_LOCATION), 101)
+
+            val intent = Intent(requireContext(), WalkingTrackerService::class.java).apply {
+                action = "START"
+                putExtra("SESSION_ID", sessionId)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) requireContext().startForegroundService(intent) else requireContext().startService(intent)
+        } else {
+            val intent = Intent(requireContext(), WalkingTrackerService::class.java).apply {
+                action = "START"
+                putExtra("SESSION_ID", sessionId)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) requireContext().startForegroundService(intent) else requireContext().startService(intent)
         }
     }
 

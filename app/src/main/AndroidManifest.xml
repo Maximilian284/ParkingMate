@@ -15,8 +15,14 @@
     <!-- Permessi per la scadenza esatta dei Ticket (AlarmManager) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> <!-- Per ripristinare gli allarmi se spegni il telefono -->
-
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- Permesso per rilevare se l'utente cammina o è fermo (Activity Recognition) -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+    <!-- Permessi per il tracciamento in background continuo (Foreground Service) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <application
         android:allowBackup="true"
@@ -42,6 +48,15 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />
 
+        <!-- I NOSTRI RICEVITORI -->
         <receiver android:name=".AlarmReceiver" android:exported="false" />
+        <receiver android:name=".GeofenceReceiver" android:exported="false" />
+
+        <!-- IL SERVIZIO PER IL TRACCIAMENTO DELLA CAMMINATA -->
+        <service
+            android:name=".WalkingTrackerService"
+            android:foregroundServiceType="location"
+            android:exported="false" />
+
     </application>
 </manifest>

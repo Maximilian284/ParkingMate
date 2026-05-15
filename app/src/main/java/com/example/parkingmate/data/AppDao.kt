@@ -48,4 +48,10 @@ interface AppDao {
 
     @Query("UPDATE parking_sessions SET isActive = 0, endTime = :endTime WHERE id = :sessionId")
     suspend fun terminateSessionById(sessionId: Int, endTime: Long)
+
+    @Query("UPDATE parking_sessions SET walkDuration = :duration, walkDistance = :distance WHERE id = :sessionId")
+    suspend fun updateWalkEffort(sessionId: Int, duration: Long, distance: Float)
+
+    @Query("SELECT * FROM parking_sessions WHERE vehicleId = :vId AND isActive = 1")
+    suspend fun getActiveParkingsForVehicle(vId: Int): List<ParkingSession>
 }

@@ -15,12 +15,7 @@ import android.app.Application
 import com.example.parkingmate.AlarmHelper
 import com.example.parkingmate.WorkManagerHelper
 
-
 class ParkMateViewModel(private val application: Application, private val dao: AppDao) : ViewModel() {
-
-    // 1. I DATI IN TEMPO REALE (StateFlow)
-    // stateIn converte il Flow del Database in uno StateFlow perfetto per la UI moderna.
-    // Se aggiungi un veicolo, questa lista si aggiorna da sola in tutti i Fragment!
     val vehiclesList: StateFlow<List<Vehicle>> = dao.getAllVehicles()
         .stateIn(
             scope = viewModelScope,
@@ -34,10 +29,6 @@ class ParkMateViewModel(private val application: Application, private val dao: A
     val historyParkings: StateFlow<List<SessionWithVehicle>> = dao.getHistoryParkings()
         .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(5000), initialValue = emptyList())
 
-    // (Aggiungeremo qui le liste per i Parcheggi e i Luoghi in seguito, per ora partiamo dai Veicoli)
-
-    // 2. LE AZIONI (Inserisci, Elimina, ecc.)
-    // Usiamo viewModelScope.launch per fare il lavoro "in background" senza bloccare l'app
     fun addVehicle(name: String, type: String) {
         viewModelScope.launch {
             val newVehicle = Vehicle(name = name, type = type)
@@ -57,7 +48,6 @@ class ParkMateViewModel(private val application: Application, private val dao: A
         }
     }
 
-    // --- SALVATAGGIO LUOGO PREFERITO ---
     fun addSavedLocation(name: String, lat: Double, lng: Double, type: String, notes: String?, cost: Double, initialCost: Double = 0.0, maxCost: Double = 0.0) {
         viewModelScope.launch {
             val location = SavedLocation(name = name, latitude = lat, longitude = lng, defaultType = type, notes = notes, defaultCost = cost, initialCost = initialCost, maxCost = maxCost)
@@ -81,20 +71,43 @@ class ParkMateViewModel(private val application: Application, private val dao: A
     fun addParkingSession(
         vehicleId: Int, vehicleName: String, locationName: String?, type: String,
         lat: Double, lng: Double, notes: String?, photoPath: String?,
-        cost: Double, initialCost: Double = 0.0, maxCost: Double = 0.0, endTime: Long? = null
+        cost: Double, initialCost: Double = 0.0, maxCost: Double = 0.0, endTime: Long? = null,
+        onSessionSaved: ((Int) -> Unit)? = null
     ) {
         viewModelScope.launch {
+            val now = System.currentTimeMillis()
+
+            // --- REQUISITO PROFESSORE: CHIUDI I VECCHI PARCHEGGI ATTIVI DELLO STESSO VEICOLO ---
+            val oldSessions = dao.getActiveParkingsForVehicle(vehicleId)
+            for (oldSession in oldSessions) {
+                val finishedSession = oldSession.copy(isActive = false, endTime = now)
+                dao.updateSession(finishedSession) // Spostato nello storico con i dati definitivi!
+                AlarmHelper.cancelAlarms(application.applicationContext, oldSession.id) // Cancella eventuali notifiche rimaste pendenti
+            }
+            // -----------------------------------------------------------------------------------
+
+            // --- CREA IL NUOVO PARCHEGGIO ---
             val session = ParkingSession(
                 vehicleId = vehicleId, locationName = locationName, type = type,
-                startTime = System.currentTimeMillis(), latitude = lat, longitude = lng,
+                startTime = now, latitude = lat, longitude = lng,
                 note = notes, photoPath = photoPath,
-                cost = cost, initialCost = initialCost, maxCost = maxCost, // <--- Salvataggio!
+                cost = cost, initialCost = initialCost, maxCost = maxCost,
                 isActive = true, endTime = endTime
             )
+
             val newId = dao.insertSession(session).toInt()
             val savedSession = session.copy(id = newId)
+
+            // Imposta i nuovi allarmi / notifiche
             AlarmHelper.scheduleFixedTicketAlarms(application.applicationContext, savedSession, vehicleName)
-            if (type == "All'ora") WorkManagerHelper.startOrUpdatePeriodicWork(application.applicationContext)
+            if (type == "All'ora" || type == "Hourly") {
+                WorkManagerHelper.startOrUpdatePeriodicWork(application.applicationContext)
+            }
+
+            // Restituisce l'ID al frammento in primo piano per far partire l'Effort Score
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                onSessionSaved?.invoke(newId)
+            }
         }
     }
 
@@ -105,13 +118,11 @@ class ParkMateViewModel(private val application: Application, private val dao: A
         }
     }
 
-    // --- TERMINA UN PARCHEGGIO ATTIVO ---
     fun finishParking(session: ParkingSession) {
         viewModelScope.launch {
             val finishedSession = session.copy(isActive = false, endTime = System.currentTimeMillis())
             dao.updateSession(finishedSession)
 
-            // CANCELLIAMO LE NOTIFICHE SE TERMINIAMO PRIMA!
             AlarmHelper.cancelAlarms(application.applicationContext, session.id)
         }
     }
@@ -125,6 +136,12 @@ class ParkMateViewModel(private val application: Application, private val dao: A
     fun deleteParkingSession(session: ParkingSession) {
         viewModelScope.launch {
             dao.deleteSession(session)
+        }
+    }
+
+    fun saveWalkEffort(sessionId: Int, durationSeconds: Long, distanceMeters: Float) {
+        viewModelScope.launch {
+            dao.updateWalkEffort(sessionId, durationSeconds, distanceMeters)
         }
     }
 }

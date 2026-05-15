@@ -5,6 +5,7 @@ import android.app.TimePickerDialog
 import android.location.Geocoder
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
@@ -42,6 +43,8 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import android.Manifest
+import android.content.pm.PackageManager
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
 
@@ -103,7 +106,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             }
         }
 
-        // --- CREAZIONE ADAPTER (CON TUTTI E 4 I PARAMETRI) ---
         adapter = ParkingAdapter(
             parkings = emptyList(),
             onCardClick = { item ->
@@ -222,9 +224,21 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             tvNotes.visibility = View.VISIBLE
             tvNotes.text = "Note: ${session.note}"
         }
+
+        // --- FIX FOTO: Trasformiamo il percorso testuale in un file reale ---
         if (!session.photoPath.isNullOrBlank()) {
-            ivPhoto.visibility = View.VISIBLE
-            ivPhoto.setImageURI(Uri.parse(session.photoPath))
+            try {
+                val imageFile = java.io.File(session.photoPath)
+                if (imageFile.exists()) {
+                    ivPhoto.visibility = View.VISIBLE
+                    ivPhoto.setImageURI(android.net.Uri.fromFile(imageFile))
+                } else {
+                    ivPhoto.visibility = View.GONE
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                ivPhoto.visibility = View.GONE
+            }
         }
 
         MaterialAlertDialogBuilder(requireContext())

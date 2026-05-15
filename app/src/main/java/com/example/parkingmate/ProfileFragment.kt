@@ -18,6 +18,18 @@ import com.google.android.material.materialswitch.MaterialSwitch
 
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
+    private val requestEffortPermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val activityGranted = permissions[Manifest.permission.ACTIVITY_RECOGNITION] ?: false
+        val locationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+
+        if (!activityGranted || !locationGranted) {
+            Toast.makeText(requireContext(), "Permessi necessari per l'Effort Score negati. La funzione potrebbe non funzionare.", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(requireContext(), "Permessi concessi! L'Effort Score è pronto.", Toast.LENGTH_SHORT).show()
+        }
+    }
     private lateinit var prefs: SharedPreferences
 
     // --- GESTIONE PERMESSO NOTIFICHE (Per Android 13+) ---
@@ -44,6 +56,8 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         val btnPeriodicInterval = view.findViewById<Button>(R.id.btnPeriodicInterval)
 
         val switchGeofencing = view.findViewById<MaterialSwitch>(R.id.switchGeofencing)
+
+        val switchEffort = view.findViewById<MaterialSwitch>(R.id.switchEffort)
 
         // --- 1. CARICAMENTO VALORI SALVATI (o default se è la prima volta) ---
         val isFixedEnabled = prefs.getBoolean("fixed_enabled", true)
@@ -98,6 +112,27 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
             if (isChecked) {
                 checkNotificationPermission()
                 Toast.makeText(requireContext(), "Geofencing attivato! Assicurati di avere la posizione sempre consentita.", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        // Legge l'impostazione salvata (di default accesa)
+        val isEffortEnabled = prefs.getBoolean("effort_global_enabled", true)
+        switchEffort.isChecked = isEffortEnabled
+
+        switchEffort.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("effort_global_enabled", isChecked).apply()
+
+            // Se lo accende, chiediamo i permessi che servono
+            if (isChecked) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    requestEffortPermissionsLauncher.launch(
+                        arrayOf(Manifest.permission.ACTIVITY_RECOGNITION, Manifest.permission.ACCESS_FINE_LOCATION)
+                    )
+                } else {
+                    requestEffortPermissionsLauncher.launch(
+                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+                    )
+                }
             }
         }
 

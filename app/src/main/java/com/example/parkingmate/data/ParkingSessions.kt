@@ -1,4 +1,5 @@
 package com.example.parkingmate.data
+
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -15,7 +16,10 @@ data class ParkingSession(
     val note: String? = null,
     val photoPath: String? = null,
     val cost: Double = 0.0,
-    val initialCost: Double = 0.0, // Fisso Iniziale
-    val maxCost: Double = 0.0,     // Max Giornaliero
-    val isActive: Boolean = true
+    val initialCost: Double = 0.0,
+    val maxCost: Double = 0.0,
+    val isActive: Boolean = true,
+    // Effort score
+    val walkDuration: Long? = null,
+    val walkDistance: Float? = null
 )

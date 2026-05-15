@@ -39,6 +39,9 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
     }
 
     private var isMapMode = false
+
+    private var viewMode = 0 // 0 = Grafico, 1 = Mappa Termica, 2 = Mappa Sforzo
+    private val circles = mutableListOf<com.google.android.gms.maps.model.Circle>()
     private var currentFilterDays = -1 // -1 = Sempre
 
     private var allParkings: List<SessionWithVehicle> = emptyList()
@@ -87,13 +90,15 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
 
     private fun setupButtons() {
         btnToggle.setOnClickListener {
-            isMapMode = !isMapMode
+            viewMode = (viewMode + 1) % 3
 
-            // Cambia l'icona e il testo del bottone dinamicamente
-            btnToggle.text = if (isMapMode) "Grafico Costi" else "Mappa Termica"
-            btnToggle.setIconResource(if (isMapMode) android.R.drawable.ic_menu_sort_by_size else android.R.drawable.ic_dialog_map)
-
+            when (viewMode) {
+                0 -> { btnToggle.text = "Grafico Costi"; btnToggle.setIconResource(android.R.drawable.ic_menu_sort_by_size) }
+                1 -> { btnToggle.text = "Mappa Termica"; btnToggle.setIconResource(android.R.drawable.ic_dialog_map) }
+                2 -> { btnToggle.text = "Mappa Sforzo"; btnToggle.setIconResource(android.R.drawable.ic_menu_directions) }
+            }
             updateVisibility()
+            processData()
         }
 
         btnFilter.setOnClickListener {
@@ -153,13 +158,14 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
     }
 
     private fun updateVisibility() {
-        if (isMapMode) {
-            barChart.visibility = View.GONE
-            mapView.visibility = View.VISIBLE
-        } else {
+        if (viewMode == 0) {
             mapView.visibility = View.GONE
             barChart.visibility = View.VISIBLE
             barChart.animateY(800)
+        } else {
+            barChart.visibility = View.GONE
+            mapView.visibility = View.VISIBLE
+            processData() // Ridisegna la mappa in base allo stato 1 o 2
         }
     }
 
@@ -172,8 +178,51 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
             allParkings
         }
 
-        updateBarChart(filteredList)
-        updateHeatMap(filteredList)
+        if (viewMode == 0) {
+            updateBarChart(filteredList)
+        } else if (viewMode == 1) {
+            updateHeatMap(filteredList)
+        } else if (viewMode == 2) {
+            updateEffortMap(filteredList)
+        }
+    }
+
+    private fun updateEffortMap(list: List<SessionWithVehicle>) {
+        val map = googleMap ?: return
+
+        map.clear() // Pulizia sicura
+        heatmapOverlay = null // Dimentica l'overlay distrutto (Evita il crash!)
+
+        // Prendiamo solo i parcheggi in cui l'Effort Score è stato calcolato
+        val scoredParkings = list.filter { it.session.walkDistance != null && it.session.walkDistance > 0 }
+
+        for (item in scoredParkings) {
+            val distance = item.session.walkDistance!!
+
+            val fillColor = when {
+                distance < 200f -> android.graphics.Color.argb(100, 0, 255, 0)
+                distance < 500f -> android.graphics.Color.argb(100, 255, 255, 0)
+                else -> android.graphics.Color.argb(100, 255, 0, 0)
+            }
+
+            val strokeColor = when {
+                distance < 200f -> android.graphics.Color.GREEN
+                distance < 500f -> android.graphics.Color.YELLOW
+                else -> android.graphics.Color.RED
+            }
+
+            map.addCircle(com.google.android.gms.maps.model.CircleOptions()
+                .center(LatLng(item.session.latitude, item.session.longitude))
+                .radius(100.0)
+                .fillColor(fillColor)
+                .strokeColor(strokeColor)
+                .strokeWidth(3f)
+            )
+        }
+
+        if (scoredParkings.isEmpty()) {
+            android.widget.Toast.makeText(requireContext(), "Nessun dato di camminata salvato finora.", android.widget.Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun updateBarChart(list: List<SessionWithVehicle>) {
@@ -228,14 +277,15 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
     private fun updateHeatMap(list: List<SessionWithVehicle>) {
         val map = googleMap ?: return
 
-        heatmapOverlay?.remove()
+        map.clear() // Pulizia sicura
+        heatmapOverlay = null // Dimentica l'overlay distrutto (Evita il crash!)
 
         val latLngs = list.map { LatLng(it.session.latitude, it.session.longitude) }
 
         if (latLngs.isNotEmpty()) {
             val provider = HeatmapTileProvider.Builder()
                 .data(latLngs)
-                .radius(50) // Raggio della macchia di calore aumentato per visibilità
+                .radius(50)
                 .build()
             heatmapOverlay = map.addTileOverlay(TileOverlayOptions().tileProvider(provider))
         }
