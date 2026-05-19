@@ -138,10 +138,14 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
             }
         }
 
+        // Mostriamo il dialog prima di colorare i bottoni
         val dialog = builder.create()
         dialog.show()
 
-        // 2. Lo coloriamo di rosso per farlo risaltare
+        // Coloriamo i bottoni come richiesto: Salva = Blu chiaro, Annulla = Grigio chiaro
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(android.graphics.Color.parseColor("#4A7BC7"))
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
+
         if (vehicleToEdit != null) {
             dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL)?.setTextColor(android.graphics.Color.RED)
         }

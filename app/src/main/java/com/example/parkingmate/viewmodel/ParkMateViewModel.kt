@@ -48,19 +48,29 @@ class ParkMateViewModel(private val application: Application, private val dao: A
         }
     }
 
-    fun addSavedLocation(name: String, lat: Double, lng: Double, type: String, notes: String?, cost: Double, initialCost: Double = 0.0, maxCost: Double = 0.0) {
-        viewModelScope.launch {
-            val location = SavedLocation(name = name, latitude = lat, longitude = lng, defaultType = type, notes = notes, defaultCost = cost, initialCost = initialCost, maxCost = maxCost)
-            dao.insertLocation(location)
-        }
-    }
-
     val savedLocationsList: StateFlow<List<SavedLocation>> = dao.getAllLocations()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    fun addSavedLocation(name: String, lat: Double, lng: Double, type: String, notes: String?, photoPath: String?, cost: Double, initialCost: Double = 0.0, maxCost: Double = 0.0, isGeofenceEnabled: Boolean = false, onSaved: ((Int) -> Unit)? = null) {
+        viewModelScope.launch {
+            val location = SavedLocation(name = name, latitude = lat, longitude = lng, defaultType = type, notes = notes, photoPath = photoPath, defaultCost = cost, initialCost = initialCost, maxCost = maxCost, isGeofenceEnabled = isGeofenceEnabled)
+            val newId = dao.insertLocation(location).toInt()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                onSaved?.invoke(newId)
+            }
+        }
+    }
+
+    fun updateSavedLocation(id: Int, name: String, lat: Double, lng: Double, type: String, notes: String?, photoPath: String?, isGeofenceEnabled: Boolean = false, cost: Double, initialCost: Double = 0.0, maxCost: Double = 0.0) {
+        viewModelScope.launch {
+            val location = SavedLocation(id = id, name = name, latitude = lat, longitude = lng, defaultType = type, notes = notes, photoPath = photoPath, isGeofenceEnabled = isGeofenceEnabled, defaultCost = cost, initialCost = initialCost, maxCost = maxCost)
+            dao.updateLocation(location)
+        }
+    }
 
     fun removeSavedLocation(location: SavedLocation) {
         viewModelScope.launch {
@@ -108,13 +118,6 @@ class ParkMateViewModel(private val application: Application, private val dao: A
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 onSessionSaved?.invoke(newId)
             }
-        }
-    }
-
-    fun updateSavedLocation(id: Int, name: String, lat: Double, lng: Double, type: String, notes: String?, isGeofenceEnabled: Boolean = false, cost: Double, initialCost: Double = 0.0, maxCost: Double = 0.0) {
-        viewModelScope.launch {
-            val location = SavedLocation(id = id, name = name, latitude = lat, longitude = lng, defaultType = type, notes = notes, isGeofenceEnabled = isGeofenceEnabled, defaultCost = cost, initialCost = initialCost, maxCost = maxCost)
-            dao.updateLocation(location)
         }
     }
 

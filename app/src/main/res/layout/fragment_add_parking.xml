@@ -35,8 +35,26 @@
                 app:selectionRequired="true"
                 app:checkedButton="@+id/btnSaveFavoriteOnly">
 
-                <Button android:id="@+id/btnSaveFavoriteOnly" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Solo Preferito" />
-                <Button android:id="@+id/btnParkVehicle" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Parcheggia Veicolo" />
+                <!-- FORZIAMO I COLORI QUI -->
+                <Button
+                    android:id="@+id/btnSaveFavoriteOnly"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/white"
+                    app:backgroundTint="@color/parking_blue_dark"
+                    android:text="Solo Preferito" />
+
+                <Button
+                    android:id="@+id/btnParkVehicle"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/white"
+                    app:backgroundTint="@color/parking_blue_dark"
+                    android:text="Parcheggia Veicolo" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
             <!-- 2. NOME / SELEZIONE LUOGO -->
@@ -85,6 +103,17 @@
                     android:visibility="gone"
                     android:layout_marginStart="8dp" />
             </LinearLayout>
+
+            <!-- NUOVO INTERRUTTORE GEOFENCE LOCALE COLORATO -->
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchLocalGeofence"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Attiva Geofence (Notifiche Area)"
+                android:layout_marginTop="8dp"
+                app:thumbTint="@color/parking_blue_light"
+                app:trackTint="@color/parking_gray"
+                android:visibility="gone" />
 
             <!-- 3. TIPO DI TARIFFA E COSTI -->
             <TextView
@@ -254,14 +283,48 @@
                 <com.google.android.material.textfield.TextInputEditText android:id="@+id/etNotes" android:layout_width="match_parent" android:layout_height="wrap_content" android:lines="3" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <Button
-                android:id="@+id/btnAddPhoto"
-                style="?attr/materialButtonOutlinedStyle"
+            <!-- NUOVO CONTENITORE: DUE BOTTONI AFFIANCATI -->
+            <LinearLayout
+                android:id="@+id/layoutPhotoButtons"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Aggiungi Foto"
-                app:icon="@android:drawable/ic_menu_camera" />
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <Button
+                    android:id="@+id/btnViewPhoto"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:text="Mostra Foto"
+                    android:visibility="gone"
+                    app:icon="@android:drawable/ic_menu_gallery" />
+
+                <Button
+                    android:id="@+id/btnChangePhoto"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="Aggiungi Foto"
+                    app:icon="@android:drawable/ic_menu_camera" />
+            </LinearLayout>
+
+            <!-- ANTEPRIMA DELLA FOTO NON RITAGLIATA -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivPhotoPreview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:adjustViewBounds="true"
+                android:maxHeight="400dp"
+                android:scaleType="fitCenter"
+                android:visibility="gone"
+                android:background="#00000000"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium" />
 
         </LinearLayout>
     </ScrollView>

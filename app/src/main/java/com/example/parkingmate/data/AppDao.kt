@@ -18,7 +18,7 @@ interface AppDao {
     suspend fun deleteVehicle(vehicle: Vehicle)
 
     @Insert
-    suspend fun insertLocation(location: SavedLocation)
+    suspend fun insertLocation(location: SavedLocation): Long
 
     @Update
     suspend fun updateLocation(location: SavedLocation)

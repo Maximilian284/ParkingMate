@@ -1,75 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:layout_height="wrap_content">
 
-    <!-- Titolo: Nome del parcheggio/luogo -->
-    <TextView
-        android:id="@+id/tvDetailTitle"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Dettagli Parcheggio"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:textColor="?attr/colorPrimary"
-        android:layout_marginBottom="16dp" />
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <!-- Indirizzo -->
-    <TextView
-        android:id="@+id/tvDetailLocation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Indirizzo: Caricamento..."
-        android:textSize="15sp"
-        android:layout_marginBottom="8dp" />
+        <TextView
+            android:id="@+id/tvDetailTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dettagli Parcheggio"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginBottom="16dp" />
 
-    <!-- Veicolo -->
-    <TextView
-        android:id="@+id/tvDetailVehicle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Veicolo: "
-        android:textSize="15sp"
-        android:layout_marginBottom="8dp" />
+        <TextView
+            android:id="@+id/tvDetailLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Indirizzo: Caricamento..."
+            android:textSize="15sp"
+            android:layout_marginBottom="8dp" />
 
-    <!-- Data Inizio -->
-    <TextView
-        android:id="@+id/tvDetailStartDate"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Inizio: "
-        android:textSize="15sp"
-        android:layout_marginBottom="8dp" />
+        <TextView
+            android:id="@+id/tvDetailVehicle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Veicolo: "
+            android:textSize="15sp"
+            android:layout_marginBottom="8dp" />
 
-    <!-- Tariffa -->
-    <TextView
-        android:id="@+id/tvDetailTariff"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Tipo tariffa: "
-        android:textSize="15sp"
-        android:layout_marginBottom="12dp" />
+        <TextView
+            android:id="@+id/tvDetailStartDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Inizio: "
+            android:textSize="15sp"
+            android:layout_marginBottom="8dp" />
 
-    <!-- Note -->
-    <TextView
-        android:id="@+id/tvDetailNotes"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Note: "
-        android:textSize="15sp"
-        android:textStyle="italic"
-        android:layout_marginBottom="16dp"
-        android:visibility="gone" />
+        <TextView
+            android:id="@+id/tvDetailTariff"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tipo tariffa: "
+            android:textSize="15sp"
+            android:layout_marginBottom="12dp" />
 
-    <!-- Foto -->
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/ivDetailPhoto"
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:scaleType="centerCrop"
-        android:visibility="gone"
-        android:background="#EEEEEE" />
+        <TextView
+            android:id="@+id/tvDetailNotes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Note: "
+            android:textSize="15sp"
+            android:textStyle="italic"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone" />
 
-</LinearLayout>
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/ivDetailPhoto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:maxHeight="400dp"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            android:background="#00000000"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium" />
+
+    </LinearLayout>
+</ScrollView>

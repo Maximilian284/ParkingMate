@@ -1,7 +1,26 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
     <style name="Base.Theme.ParkingMate" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">@color/parking_blue_light</item>
+        <item name="colorOnPrimary">@color/black</item>
+        <item name="colorPrimaryContainer">@color/parking_blue_dark</item>
+        <item name="colorOnPrimaryContainer">@color/white</item>
+
+        <item name="colorSecondary">@color/parking_blue_light</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="colorSecondaryContainer">@color/parking_blue_dark</item>
+        <item name="colorOnSecondaryContainer">@color/white</item>
+
+        <item name="colorTertiary">@color/parking_blue_light</item>
+        <item name="colorOnTertiary">@color/black</item>
+        <item name="colorTertiaryContainer">@color/parking_blue_dark</item>
+        <item name="colorOnTertiaryContainer">@color/white</item>
+
+        <!-- GLI ANTI-VIOLETTO SICURI -->
+        <item name="android:colorControlActivated">@color/parking_blue_light</item>
+        <item name="android:colorAccent">@color/parking_blue_light</item>
+
+        <item name="android:statusBarColor">@color/parking_blue_dark</item>
     </style>
+
+    <style name="Theme.ParkingMate" parent="Base.Theme.ParkingMate" />
 </resources>

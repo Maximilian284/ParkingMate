@@ -4,9 +4,12 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.location.Location
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -17,17 +20,20 @@ import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.parkingmate.data.AppDatabase
+import com.example.parkingmate.data.SavedLocation
 import com.example.parkingmate.data.Vehicle
 import com.example.parkingmate.viewmodel.ParkMateViewModel
 import com.example.parkingmate.viewmodel.ParkMateViewModelFactory
@@ -45,14 +51,13 @@ import com.google.android.libraries.places.widget.AutocompleteActivity
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Calendar
-import android.content.Intent
-import androidx.core.content.ContextCompat
-import android.content.Context
 
 class AddParkingFragment : DialogFragment() {
 
@@ -73,18 +78,16 @@ class AddParkingFragment : DialogFragment() {
     private var fixedEndTimeMillis: Long? = null
 
     private val autocompleteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        when (result.resultCode) {
-            android.app.Activity.RESULT_OK -> {
-                result.data?.let { data ->
-                    val place = Autocomplete.getPlaceFromIntent(data)
-                    place.latLng?.let { latLng ->
-                        googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
-                        googleMap?.clear()
-                        googleMap?.addMarker(MarkerOptions().position(latLng).title(place.name))
-                        selectedLatitude = latLng.latitude
-                        selectedLongitude = latLng.longitude
-                        view?.findViewById<TextView>(R.id.tvSearchMap)?.text = " ${place.name}"
-                    }
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            result.data?.let { data ->
+                val place = Autocomplete.getPlaceFromIntent(data)
+                place.latLng?.let { latLng ->
+                    googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
+                    googleMap?.clear()
+                    googleMap?.addMarker(MarkerOptions().position(latLng).title(place.name))
+                    selectedLatitude = latLng.latitude
+                    selectedLongitude = latLng.longitude
+                    view?.findViewById<TextView>(R.id.tvSearchMap)?.text = " ${place.name}"
                 }
             }
         }
@@ -95,7 +98,27 @@ class AddParkingFragment : DialogFragment() {
             val file = File(requireContext().filesDir, "park_photo_${System.currentTimeMillis()}.jpg")
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it) }
             savedPhotoPath = file.absolutePath
-            view?.findViewById<Button>(R.id.btnAddPhoto)?.text = "Foto Aggiunta ✓"
+
+            // Aggiorna la UI istantaneamente
+            view?.findViewById<ImageView>(R.id.ivPhotoPreview)?.apply {
+                setImageBitmap(bitmap)
+                visibility = View.VISIBLE
+            }
+            view?.findViewById<Button>(R.id.btnChangePhoto)?.text = "Cambia Foto"
+            view?.findViewById<Button>(R.id.btnViewPhoto)?.apply {
+                visibility = View.VISIBLE
+                text = "Nascondi Foto"
+                setOnClickListener {
+                    val iv = view?.findViewById<ImageView>(R.id.ivPhotoPreview)
+                    if (iv?.visibility == View.VISIBLE) {
+                        iv.visibility = View.GONE
+                        text = "Mostra Foto"
+                    } else {
+                        iv?.visibility = View.VISIBLE
+                        text = "Nascondi Foto"
+                    }
+                }
+            }
         }
     }
 
@@ -147,6 +170,88 @@ class AddParkingFragment : DialogFragment() {
         val btnFixedEndTime = view.findViewById<Button>(R.id.btnFixedEndTime)
         val scrollView = view.findViewById<ScrollView>(R.id.scrollViewAddParking)
 
+        // --- FUNZIONE PER GESTIRE LA VISTA DELLA FOTO ---
+        fun showPhotoPreview(path: String?, mode: String) {
+            val layoutButtons = view.findViewById<LinearLayout>(R.id.layoutPhotoButtons)
+            val btnChange = view.findViewById<Button>(R.id.btnChangePhoto)
+            val btnView = view.findViewById<Button>(R.id.btnViewPhoto)
+            val ivPreview = view.findViewById<ImageView>(R.id.ivPhotoPreview)
+
+            if (!path.isNullOrBlank()) {
+                try {
+                    val file = File(path)
+                    if (file.exists()) {
+                        ivPreview.setImageURI(Uri.fromFile(file))
+                        savedPhotoPath = path
+
+                        if (mode == "LOCKED") {
+                            // Modalità Parcheggio (Luogo Fisso): Niente bottoni, mostra la foto intera!
+                            layoutButtons.visibility = View.GONE
+                            ivPreview.visibility = View.VISIBLE
+                        } else {
+                            // Modalità Modifica/Nuovo: Mostra bottoni, foto nascosta di default
+                            layoutButtons.visibility = View.VISIBLE
+                            btnView.visibility = View.VISIBLE
+                            btnChange.text = "Cambia Foto"
+                            ivPreview.visibility = View.GONE
+                            btnView.text = "Mostra Foto"
+
+                            btnView.setOnClickListener {
+                                if (ivPreview.visibility == View.VISIBLE) {
+                                    ivPreview.visibility = View.GONE
+                                    btnView.text = "Mostra Foto"
+                                } else {
+                                    ivPreview.visibility = View.VISIBLE
+                                    btnView.text = "Nascondi Foto"
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) { e.printStackTrace() }
+            } else {
+                savedPhotoPath = null
+                ivPreview.visibility = View.GONE
+                if (mode == "LOCKED") {
+                    layoutButtons.visibility = View.GONE
+                } else {
+                    layoutButtons.visibility = View.VISIBLE
+                    btnView.visibility = View.GONE
+                    btnChange.text = "Aggiungi Foto"
+                }
+            }
+        }
+
+        view.findViewById<Button>(R.id.btnChangePhoto).setOnClickListener { takePictureLauncher.launch(null) }
+
+        val switchLocalGeofence = view.findViewById<MaterialSwitch>(R.id.switchLocalGeofence)
+        val prefs = requireContext().getSharedPreferences("ParkingMatePrefs", Context.MODE_PRIVATE)
+        val isGlobalGeofenceOn = prefs.getBoolean("geofence_global_enabled", false)
+
+        fun setupGeofenceSwitchVisibility() {
+            val isParkingModeNow = (toggleGroup.checkedButtonId == R.id.btnParkVehicle)
+            val shouldShow = isEditMode || !isParkingModeNow || (isParkingModeNow && cbHeart.isChecked)
+
+            switchLocalGeofence.visibility = if (shouldShow) View.VISIBLE else View.GONE
+
+            if (!isGlobalGeofenceOn) {
+                switchLocalGeofence.isEnabled = false
+                switchLocalGeofence.isChecked = false
+                switchLocalGeofence.text = "Geofence (Disattivato in Impostazioni)"
+            } else {
+                switchLocalGeofence.isEnabled = true
+                switchLocalGeofence.text = "Attiva Geofence (Notifiche Area)"
+            }
+        }
+
+        if (isEditMode) {
+            switchLocalGeofence.isChecked = arguments?.getBoolean("is_geofence_enabled", false) ?: false
+        } else {
+            switchLocalGeofence.isChecked = true
+        }
+        setupGeofenceSwitchVisibility()
+
+        cbHeart.setOnCheckedChangeListener { _, _ -> setupGeofenceSwitchVisibility() }
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
         mapView = view.findViewById(R.id.mapViewMini)
         mapView.onCreate(savedInstanceState)
@@ -161,7 +266,7 @@ class AddParkingFragment : DialogFragment() {
                 googleMap?.addMarker(MarkerOptions().position(latLng).title("Luogo"))
                 googleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
             }
-            if (!isLocationLocked && !isEditMode) {
+            if (!isLocationLocked) {
                 googleMap?.setOnMapClickListener { latLng ->
                     googleMap?.clear()
                     googleMap?.addMarker(MarkerOptions().position(latLng).title("Selezionato"))
@@ -176,12 +281,8 @@ class AddParkingFragment : DialogFragment() {
         val mapOverlay = view.findViewById<View>(R.id.mapTransparentOverlay)
         mapOverlay?.setOnTouchListener { _, event ->
             when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    scrollView.requestDisallowInterceptTouchEvent(true)
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    scrollView.requestDisallowInterceptTouchEvent(false)
-                }
+                MotionEvent.ACTION_DOWN -> scrollView.requestDisallowInterceptTouchEvent(true)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> scrollView.requestDisallowInterceptTouchEvent(false)
             }
             mapView.dispatchTouchEvent(event)
             true
@@ -190,7 +291,6 @@ class AddParkingFragment : DialogFragment() {
         view.findViewById<Button>(R.id.btnGetLocation).setOnClickListener {
             locationPermissionRequest.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         }
-        view.findViewById<Button>(R.id.btnAddPhoto).setOnClickListener { takePictureLauncher.launch(null) }
 
         val tvSearchMap = view.findViewById<TextView>(R.id.tvSearchMap)
         tvSearchMap.setOnClickListener {
@@ -205,9 +305,8 @@ class AddParkingFragment : DialogFragment() {
         val cardMap = view.findViewById<View>(R.id.cardMap)
         val btnExpandMap = view.findViewById<android.widget.ImageButton>(R.id.btnExpandMap)
 
-        if (isLocationLocked) {
-            btnExpandMap.visibility = View.GONE
-        }
+        if (isLocationLocked) btnExpandMap.visibility = View.GONE
+
         btnExpandMap.setOnClickListener {
             isMapExpanded = !isMapExpanded
             val params = cardMap.layoutParams
@@ -252,10 +351,11 @@ class AddParkingFragment : DialogFragment() {
 
         toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked && !isVehicleLocked && !isLocationLocked) {
-                val isParking = (checkedId == R.id.btnParkVehicle)
-                layoutVehicleSelection.visibility = if (isParking) View.VISIBLE else View.GONE
-                cbHeart.visibility = if (isParking) View.VISIBLE else View.GONE
-                updateParkingOptions(isParking)
+                val isParkingModeNow = (checkedId == R.id.btnParkVehicle)
+                layoutVehicleSelection.visibility = if (isParkingModeNow) View.VISIBLE else View.GONE
+                cbHeart.visibility = if (isParkingModeNow) View.VISIBLE else View.GONE
+                updateParkingOptions(isParkingModeNow)
+                setupGeofenceSwitchVisibility()
             }
         }
 
@@ -282,11 +382,11 @@ class AddParkingFragment : DialogFragment() {
             val tilParkingType = view.findViewById<TextInputLayout>(R.id.tilParkingType)
             val tilNotes = view.findViewById<TextInputLayout>(R.id.tilNotes)
             val etNotes = view.findViewById<TextInputEditText>(R.id.etNotes)
-            val btnAddPhoto = view.findViewById<View>(R.id.btnAddPhoto)
+            val layoutPhotoButtonsLocal = view.findViewById<View>(R.id.layoutPhotoButtons)
             val btnSaveEverything = view.findViewById<View>(R.id.btnSaveEverything)
             tilParkingType.visibility = View.GONE
             tilNotes.visibility = View.GONE
-            btnAddPhoto.visibility = View.GONE
+            layoutPhotoButtonsLocal.visibility = View.GONE
             btnSaveEverything.visibility = View.GONE
 
             viewLifecycleOwner.lifecycleScope.launch {
@@ -305,6 +405,9 @@ class AddParkingFragment : DialogFragment() {
                                 etNotes.setText(loc.notes ?: "")
                                 tilNotes.isEnabled = false
 
+                                // Mostra foto in modalità "LOCKED" (No bottoni, solo foto)
+                                showPhotoPreview(loc.photoPath, "LOCKED")
+
                                 val etHourly = view.findViewById<TextInputEditText>(R.id.etCostHourly)
                                 val etInitial = view.findViewById<TextInputEditText>(R.id.etCostInitial)
                                 val etMax = view.findViewById<TextInputEditText>(R.id.etCostMax)
@@ -314,7 +417,6 @@ class AddParkingFragment : DialogFragment() {
                                 etInitial.text?.clear()
                                 etMax.text?.clear()
                                 etFixed.text?.clear()
-
                                 etHourly.isEnabled = true
                                 etInitial.isEnabled = true
                                 etMax.isEnabled = true
@@ -334,7 +436,6 @@ class AddParkingFragment : DialogFragment() {
 
                                 tilParkingType.visibility = View.VISIBLE
                                 tilNotes.visibility = View.VISIBLE
-                                btnAddPhoto.visibility = View.VISIBLE
                                 btnSaveEverything.visibility = View.VISIBLE
                             }
                         }
@@ -376,6 +477,17 @@ class AddParkingFragment : DialogFragment() {
                 if (tCost > 0) etFixed.setText(tCost.toString())
                 etFixed.isEnabled = false
             }
+
+            val tNotes = arguments?.getString("notes")
+            if (!tNotes.isNullOrBlank()) {
+                val etNotes = view.findViewById<TextInputEditText>(R.id.etNotes)
+                etNotes.setText(tNotes)
+                view.findViewById<TextInputLayout>(R.id.tilNotes).isEnabled = false
+            }
+
+            // Mostra foto in modalità "LOCKED" (Senza bottoni)
+            val tPhoto = arguments?.getString("photoPath")
+            showPhotoPreview(tPhoto, "LOCKED")
         }
 
         if (isEditMode) {
@@ -384,6 +496,7 @@ class AddParkingFragment : DialogFragment() {
                 setOnClickListener {
                     editingLocationId?.let { id ->
                         viewModel.removeSavedLocation(com.example.parkingmate.data.SavedLocation(id = id, name = "", latitude = 0.0, longitude = 0.0))
+                        GeofenceHelper.removeGeofence(requireContext(), id)
                         Toast.makeText(requireContext(), "Luogo Eliminato", Toast.LENGTH_SHORT).show()
                         dismiss()
                     }
@@ -391,6 +504,11 @@ class AddParkingFragment : DialogFragment() {
             }
             view.findViewById<TextInputEditText>(R.id.etLocationName).setText(arguments?.getString("name", ""))
             view.findViewById<TextInputEditText>(R.id.etNotes).setText(arguments?.getString("notes", ""))
+
+            // Mostra foto in modalità "EDIT" (Con bottoni)
+            val tPhoto = arguments?.getString("photoPath")
+            showPhotoPreview(tPhoto, "EDIT")
+
             actvParkingType.setText(arguments?.getString("type", ""), false)
             updateParkingOptions(false)
             toggleGroup.check(R.id.btnSaveFavoriteOnly)
@@ -433,72 +551,68 @@ class AddParkingFragment : DialogFragment() {
                 finalCost = costStrFixed.toDoubleOrNull() ?: 0.0
             }
 
+            val isGeoChecked = switchLocalGeofence.isChecked
+            val appContext = requireContext().applicationContext
+
             if (isParkMode) {
                 val selectedVehicleName = if (isVehicleLocked) arguments?.getString("preselected_vehicle_name") else view.findViewById<AutoCompleteTextView>(R.id.actvSelectVehicle).text.toString()
                 val vehicle = currentVehicles.find { "${it.name} (${it.type})" == selectedVehicleName }
                 if (vehicle == null) { Toast.makeText(requireContext(), "Seleziona un veicolo!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
 
-                // --- FUNZIONE CHE SALVA E DECIDE SE AVVIARE IL TRACKER ---
                 val saveAndTrackLogic = { shouldTrack: Boolean, feedbackMsg: String ->
                     viewModel.addParkingSession(vehicle.id, vehicle.name, name, type, selectedLatitude, selectedLongitude, notes, savedPhotoPath, finalCost, finalInitial, finalMax, fixedEndTimeMillis) { newId ->
 
                         if (shouldTrack) {
                             startWalkingService(newId)
-                            Toast.makeText(requireContext(), "Parcheggio Avviato! Tracciamento camminata in corso...", Toast.LENGTH_LONG).show()
+                            Toast.makeText(appContext, "Parcheggio Avviato! Tracciamento camminata in corso...", Toast.LENGTH_LONG).show()
                         } else {
-                            Toast.makeText(requireContext(), feedbackMsg, Toast.LENGTH_LONG).show()
+                            if (feedbackMsg.isNotEmpty()) Toast.makeText(appContext, feedbackMsg, Toast.LENGTH_LONG).show()
                         }
 
                         if (cbHeart.isChecked && cbHeart.visibility == View.VISIBLE) {
-                            viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes, finalCost, finalInitial, finalMax)
+                            viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes, savedPhotoPath, finalCost, finalInitial, finalMax, isGeoChecked) { locId ->
+                                if (isGeoChecked) {
+                                    val loc = SavedLocation(locId, name, selectedLatitude, selectedLongitude, type, notes, savedPhotoPath, isGeoChecked, finalCost, finalInitial, finalMax)
+                                    GeofenceHelper.addGeofence(appContext, loc)
+                                }
+                            }
                         }
                         dismiss()
                     }
                 }
 
-                // --- LETTURA DEL TASTO IMPOSTAZIONI ---
-                val prefs = requireContext().getSharedPreferences("ParkingMatePrefs", Context.MODE_PRIVATE)
-                val isEffortGloballyEnabled = prefs.getBoolean("effort_global_enabled", true)
-
-                // LOGICA: Se lo sforzo è disattivato nelle impostazioni globali...
+                val isEffortGloballyEnabled = prefs.getBoolean("effort_global_enabled", false)
                 if (!isEffortGloballyEnabled) {
                     saveAndTrackLogic(false, "Parcheggio salvato! (Tracciamento sforzo disabilitato in Impostazioni)")
-                }
-                // Altrimenti, se abbiamo il permesso GPS... calcoliamo la distanza
-                else if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                } else if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                     fusedLocationClient.lastLocation.addOnCompleteListener { task ->
                         val currentLocation = task.result
                         if (currentLocation != null) {
                             val distanceResults = FloatArray(1)
-                            Location.distanceBetween(
-                                currentLocation.latitude, currentLocation.longitude,
-                                selectedLatitude, selectedLongitude,
-                                distanceResults
-                            )
-                            val distanceInMeters = distanceResults[0]
-
-                            if (distanceInMeters <= 250f) {
-                                saveAndTrackLogic(true, "") // Traccia!
-                            } else {
-                                saveAndTrackLogic(false, "Parcheggio salvato! (Sei troppo lontano dall'auto per il tracciamento)")
-                            }
+                            Location.distanceBetween(currentLocation.latitude, currentLocation.longitude, selectedLatitude, selectedLongitude, distanceResults)
+                            if (distanceResults[0] <= 250f) saveAndTrackLogic(true, "") else saveAndTrackLogic(false, "Parcheggio salvato! (Sei troppo lontano dall'auto per il tracciamento)")
                         } else {
                             saveAndTrackLogic(false, "Parcheggio salvato! (GPS debole, sforzo non tracciato)")
                         }
                     }
-                }
-                // Altrimenti non possiamo tracciare perché manca il permesso...
-                else {
+                } else {
                     saveAndTrackLogic(false, "Parcheggio salvato! (Permessi GPS mancanti)")
                 }
 
             } else {
                 if (isEditMode && editingLocationId != null) {
-                    viewModel.updateSavedLocation(editingLocationId!!, name, selectedLatitude, selectedLongitude, type, notes, false, finalCost, finalInitial, finalMax)
+                    viewModel.updateSavedLocation(editingLocationId!!, name, selectedLatitude, selectedLongitude, type, notes, savedPhotoPath, isGeoChecked, finalCost, finalInitial, finalMax)
+                    val loc = SavedLocation(editingLocationId!!, name, selectedLatitude, selectedLongitude, type, notes, savedPhotoPath, isGeoChecked, finalCost, finalInitial, finalMax)
+                    if (isGeoChecked) GeofenceHelper.addGeofence(appContext, loc) else GeofenceHelper.removeGeofence(appContext, loc.id)
                 } else {
-                    viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes, finalCost, finalInitial, finalMax)
+                    viewModel.addSavedLocation(name, selectedLatitude, selectedLongitude, type, notes, savedPhotoPath, finalCost, finalInitial, finalMax, isGeoChecked) { locId ->
+                        if (isGeoChecked) {
+                            val loc = SavedLocation(locId, name, selectedLatitude, selectedLongitude, type, notes, savedPhotoPath, isGeoChecked, finalCost, finalInitial, finalMax)
+                            GeofenceHelper.addGeofence(appContext, loc)
+                        }
+                    }
                 }
-                Toast.makeText(requireContext(), "Luogo Salvato!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(appContext, "Luogo Salvato!", Toast.LENGTH_SHORT).show()
                 dismiss()
             }
         }
@@ -530,24 +644,17 @@ class AddParkingFragment : DialogFragment() {
     }
 
     private fun startWalkingService(sessionId: Int) {
+        val ctx = context ?: return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
-
-            // Se non ha il permesso, glielo chiediamo e partiamo
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION, Manifest.permission.ACCESS_FINE_LOCATION), 101)
-
-            val intent = Intent(requireContext(), WalkingTrackerService::class.java).apply {
-                action = "START"
-                putExtra("SESSION_ID", sessionId)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) requireContext().startForegroundService(intent) else requireContext().startService(intent)
-        } else {
-            val intent = Intent(requireContext(), WalkingTrackerService::class.java).apply {
-                action = "START"
-                putExtra("SESSION_ID", sessionId)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) requireContext().startForegroundService(intent) else requireContext().startService(intent)
         }
+
+        val intent = Intent(ctx, WalkingTrackerService::class.java).apply {
+            action = "START"
+            putExtra("SESSION_ID", sessionId)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(intent) else ctx.startService(intent)
     }
 
     override fun onStart() { super.onStart(); mapView.onStart() }

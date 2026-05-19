@@ -2,17 +2,22 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/navigation_home"
+        android:icon="@drawable/home_pin_24px"
         android:title="Home" />
     <item
         android:id="@+id/navigation_saved_locations"
+        android:icon="@drawable/near_me_24px"
         android:title="Luoghi" />
     <item
         android:id="@+id/navigation_vehicles"
+        android:icon="@drawable/directions_car_24px"
         android:title="Veicoli" />
     <item
         android:id="@+id/navigation_stats"
-        android:title="Stats" />
+        android:icon="@drawable/bar_chart_4_bars_24px"
+        android:title="Statistiche" />
     <item
         android:id="@+id/navigation_profile"
-        android:title="Profilo" />
+        android:icon="@drawable/settings_24px"
+        android:title="Impostazioni" />
 </menu>

@@ -112,18 +112,22 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 showParkingDetailsDialog(item)
             },
             onEndClick = { sessionToEnd ->
-                MaterialAlertDialogBuilder(requireContext())
+                val dialog = MaterialAlertDialogBuilder(requireContext())
                     .setTitle("Termina Parcheggio")
                     .setMessage("Vuoi terminare questa sosta?")
-                    .setPositiveButton("Termina") { _, _ ->
+                    .setPositiveButton("Termina e Traccia") { _, _ ->
                         viewModel.finishParking(sessionToEnd)
                         Toast.makeText(requireContext(), "Sosta Terminata!", Toast.LENGTH_SHORT).show()
                     }
                     .setNegativeButton("Annulla", null)
-                    .show()
+                    .create()
+                dialog.show()
+                // Colori: Termina = Blu Chiaro, Annulla = Grigio
+                dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(android.graphics.Color.parseColor("#4A7BC7"))
+                dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
             },
             onDeleteClick = { sessionToDelete ->
-                MaterialAlertDialogBuilder(requireContext())
+                val dialog = MaterialAlertDialogBuilder(requireContext())
                     .setTitle("Elimina Parcheggio")
                     .setMessage("Vuoi eliminare definitivamente questo record?")
                     .setPositiveButton("Elimina") { _, _ ->
@@ -131,7 +135,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                         Toast.makeText(requireContext(), "Eliminato!", Toast.LENGTH_SHORT).show()
                     }
                     .setNegativeButton("Annulla", null)
-                    .show()
+                    .create()
+                dialog.show()
+                // Colori: Elimina = Rosso, Annulla = Grigio
+                dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(android.graphics.Color.RED)
+                dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
             }
         )
         rvHomeParkings.layoutManager = LinearLayoutManager(requireContext())
@@ -241,11 +249,16 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             }
         }
 
-        MaterialAlertDialogBuilder(requireContext())
+        val dialog = MaterialAlertDialogBuilder(requireContext())
             .setView(dialogView)
             .setPositiveButton("Chiudi", null)
             .setNeutralButton("Modifica Ora") { _, _ -> showEditTimeDialog(session) }
-            .show()
+            .create()
+
+        dialog.show()
+        // Colori richiesti da te: Chiudi = Blu Chiaro, Modifica Ora = Grigio Chiaro
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(android.graphics.Color.parseColor("#4A7BC7"))
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL)?.setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
 
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {

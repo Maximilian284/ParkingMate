@@ -56,10 +56,12 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                 b.putDouble("lat", location.latitude)
                 b.putDouble("lng", location.longitude)
                 b.putString("type", location.defaultType)
-                b.putBoolean("is_location_locked", true)
                 b.putDouble("cost", location.defaultCost)
+                b.putString("notes", location.notes)
+                b.putString("photoPath", location.photoPath)
                 b.putDouble("initialCost", location.initialCost)
                 b.putDouble("maxCost", location.maxCost)
+                b.putBoolean("is_location_locked", true)
                 form.arguments = b
                 form.show(childFragmentManager, "AddParkingDialog")
             },
@@ -72,32 +74,14 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                 b.putDouble("lng", location.longitude)
                 b.putString("type", location.defaultType)
                 b.putString("notes", location.notes)
-                b.putBoolean("is_edit_mode", true)
+                b.putString("photoPath", location.photoPath)
                 b.putDouble("cost", location.defaultCost)
                 b.putDouble("initialCost", location.initialCost)
                 b.putDouble("maxCost", location.maxCost)
+                b.putBoolean("is_geofence_enabled", location.isGeofenceEnabled) // <--- NUOVO: Passiamo lo stato!
+                b.putBoolean("is_edit_mode", true)
                 form.arguments = b
                 form.show(childFragmentManager, "AddParkingDialog")
-            },
-            // --- NUOVA PARTE: CLICK SULL'INTERRUTTORE GEOFENCE ---
-            onGeofenceToggle = { location, isChecked ->
-                val prefs = requireContext().getSharedPreferences("ParkingMatePrefs", android.content.Context.MODE_PRIVATE)
-                val isGlobalEnabled = prefs.getBoolean("geofence_global_enabled", false)
-
-                if (!isGlobalEnabled && isChecked) {
-                    android.widget.Toast.makeText(requireContext(), "Attiva prima il Geofencing Globale nelle Impostazioni!", android.widget.Toast.LENGTH_LONG).show()
-                    adapter.notifyDataSetChanged() // Riporta l'interruttore su OFF visivamente
-                } else {
-                    // Salviamo il nuovo stato (acceso/spento) nel Database!
-                    viewModel.updateSavedLocation(location.id, location.name, location.latitude, location.longitude, location.defaultType, location.notes, isChecked, location.defaultCost)
-
-                    // CHIAMIAMO IL MOTORE GEOFENCE
-                    if (isChecked) {
-                        GeofenceHelper.addGeofence(requireContext(), location)
-                    } else {
-                        GeofenceHelper.removeGeofence(requireContext(), location.id)
-                    }
-                }
             }
         )
         rv.layoutManager = LinearLayoutManager(requireContext())
