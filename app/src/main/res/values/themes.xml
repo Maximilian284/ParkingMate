@@ -1,28 +1,27 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Base.Theme.ParkingMate" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Colore Primario -->
         <item name="colorPrimary">@color/parking_blue</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorPrimaryContainer">@color/parking_blue_light</item>
         <item name="colorOnPrimaryContainer">@color/white</item>
 
-        <!-- Colore Secondario -->
         <item name="colorSecondary">@color/parking_blue_light</item>
         <item name="colorOnSecondary">@color/white</item>
         <item name="colorSecondaryContainer">@color/parking_blue_light</item>
         <item name="colorOnSecondaryContainer">@color/white</item>
 
-        <!-- Colore Terziario -->
         <item name="colorTertiary">@color/parking_blue</item>
         <item name="colorOnTertiary">@color/white</item>
         <item name="colorTertiaryContainer">@color/parking_blue_light</item>
         <item name="colorOnTertiaryContainer">@color/white</item>
 
-        <!-- GLI ANTI-VIOLETTO SICURI -->
         <item name="android:colorControlActivated">@color/parking_blue</item>
         <item name="android:colorAccent">@color/parking_blue_light</item>
 
         <item name="android:statusBarColor">@color/parking_blue_dark</item>
+
+        <item name="colorOutline">@color/parking_gray_light</item>
+        <item name="android:textColorHint">@color/parking_gray_light</item>
     </style>
 
     <style name="Theme.ParkingMate" parent="Base.Theme.ParkingMate" />

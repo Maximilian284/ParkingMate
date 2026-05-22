@@ -19,7 +19,6 @@ data class ParkingSession(
     val initialCost: Double = 0.0,
     val maxCost: Double = 0.0,
     val isActive: Boolean = true,
-    // Effort score
     val walkDuration: Long? = null,
     val walkDistance: Float? = null
 )

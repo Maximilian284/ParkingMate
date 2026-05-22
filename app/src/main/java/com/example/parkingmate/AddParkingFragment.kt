@@ -8,8 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.location.Location
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -51,7 +51,6 @@ import com.google.android.libraries.places.widget.AutocompleteActivity
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -99,26 +98,11 @@ class AddParkingFragment : DialogFragment() {
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it) }
             savedPhotoPath = file.absolutePath
 
-            // Aggiorna la UI istantaneamente
             view?.findViewById<ImageView>(R.id.ivPhotoPreview)?.apply {
                 setImageBitmap(bitmap)
                 visibility = View.VISIBLE
             }
-            view?.findViewById<Button>(R.id.btnChangePhoto)?.text = "Cambia Foto"
-            view?.findViewById<Button>(R.id.btnViewPhoto)?.apply {
-                visibility = View.VISIBLE
-                text = "Nascondi Foto"
-                setOnClickListener {
-                    val iv = view?.findViewById<ImageView>(R.id.ivPhotoPreview)
-                    if (iv?.visibility == View.VISIBLE) {
-                        iv.visibility = View.GONE
-                        text = "Mostra Foto"
-                    } else {
-                        iv?.visibility = View.VISIBLE
-                        text = "Nascondi Foto"
-                    }
-                }
-            }
+            view?.findViewById<Button>(R.id.btnChangePhoto)?.text = "Cambia Foto ✓"
         }
     }
 
@@ -170,62 +154,43 @@ class AddParkingFragment : DialogFragment() {
         val btnFixedEndTime = view.findViewById<Button>(R.id.btnFixedEndTime)
         val scrollView = view.findViewById<ScrollView>(R.id.scrollViewAddParking)
 
-        // --- FUNZIONE PER GESTIRE LA VISTA DELLA FOTO ---
-        fun showPhotoPreview(path: String?, mode: String) {
-            val layoutButtons = view.findViewById<LinearLayout>(R.id.layoutPhotoButtons)
-            val btnChange = view.findViewById<Button>(R.id.btnChangePhoto)
-            val btnView = view.findViewById<Button>(R.id.btnViewPhoto)
+        val switchLocalGeofence = view.findViewById<MaterialSwitch>(R.id.switchLocalGeofence)
+        val prefs = requireContext().getSharedPreferences("ParkingMatePrefs", Context.MODE_PRIVATE)
+        val isGlobalGeofenceOn = prefs.getBoolean("geofence_global_enabled", false)
+
+        // --- FUNZIONE PER MOSTRARE LA FOTO CON BITMAP FACTORY ---
+        fun displayPhotoSafely(path: String?, isLocked: Boolean) {
             val ivPreview = view.findViewById<ImageView>(R.id.ivPhotoPreview)
+            val btnAddPhoto = view.findViewById<Button>(R.id.btnChangePhoto)
 
             if (!path.isNullOrBlank()) {
                 try {
                     val file = File(path)
                     if (file.exists()) {
-                        ivPreview.setImageURI(Uri.fromFile(file))
+                        val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                        ivPreview.setImageBitmap(bitmap)
+                        ivPreview.visibility = View.VISIBLE
                         savedPhotoPath = path
 
-                        if (mode == "LOCKED") {
-                            // Modalità Parcheggio (Luogo Fisso): Niente bottoni, mostra la foto intera!
-                            layoutButtons.visibility = View.GONE
-                            ivPreview.visibility = View.VISIBLE
+                        if (isLocked) {
+                            btnAddPhoto.text = "Foto Inclusa ✓"
+                            btnAddPhoto.isEnabled = false
                         } else {
-                            // Modalità Modifica/Nuovo: Mostra bottoni, foto nascosta di default
-                            layoutButtons.visibility = View.VISIBLE
-                            btnView.visibility = View.VISIBLE
-                            btnChange.text = "Cambia Foto"
-                            ivPreview.visibility = View.GONE
-                            btnView.text = "Mostra Foto"
-
-                            btnView.setOnClickListener {
-                                if (ivPreview.visibility == View.VISIBLE) {
-                                    ivPreview.visibility = View.GONE
-                                    btnView.text = "Mostra Foto"
-                                } else {
-                                    ivPreview.visibility = View.VISIBLE
-                                    btnView.text = "Nascondi Foto"
-                                }
-                            }
+                            btnAddPhoto.text = "Cambia Foto ✓"
                         }
+                    } else {
+                        ivPreview.visibility = View.GONE
+                        savedPhotoPath = null
                     }
-                } catch (e: Exception) { e.printStackTrace() }
-            } else {
-                savedPhotoPath = null
-                ivPreview.visibility = View.GONE
-                if (mode == "LOCKED") {
-                    layoutButtons.visibility = View.GONE
-                } else {
-                    layoutButtons.visibility = View.VISIBLE
-                    btnView.visibility = View.GONE
-                    btnChange.text = "Aggiungi Foto"
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    ivPreview.visibility = View.GONE
                 }
+            } else {
+                ivPreview.visibility = View.GONE
+                savedPhotoPath = null
             }
         }
-
-        view.findViewById<Button>(R.id.btnChangePhoto).setOnClickListener { takePictureLauncher.launch(null) }
-
-        val switchLocalGeofence = view.findViewById<MaterialSwitch>(R.id.switchLocalGeofence)
-        val prefs = requireContext().getSharedPreferences("ParkingMatePrefs", Context.MODE_PRIVATE)
-        val isGlobalGeofenceOn = prefs.getBoolean("geofence_global_enabled", false)
 
         fun setupGeofenceSwitchVisibility() {
             val isParkingModeNow = (toggleGroup.checkedButtonId == R.id.btnParkVehicle)
@@ -266,7 +231,7 @@ class AddParkingFragment : DialogFragment() {
                 googleMap?.addMarker(MarkerOptions().position(latLng).title("Luogo"))
                 googleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
             }
-            if (!isLocationLocked) {
+            if (!isLocationLocked && !isEditMode) {
                 googleMap?.setOnMapClickListener { latLng ->
                     googleMap?.clear()
                     googleMap?.addMarker(MarkerOptions().position(latLng).title("Selezionato"))
@@ -291,6 +256,7 @@ class AddParkingFragment : DialogFragment() {
         view.findViewById<Button>(R.id.btnGetLocation).setOnClickListener {
             locationPermissionRequest.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         }
+        view.findViewById<Button>(R.id.btnChangePhoto).setOnClickListener { takePictureLauncher.launch(null) }
 
         val tvSearchMap = view.findViewById<TextView>(R.id.tvSearchMap)
         tvSearchMap.setOnClickListener {
@@ -305,7 +271,7 @@ class AddParkingFragment : DialogFragment() {
         val cardMap = view.findViewById<View>(R.id.cardMap)
         val btnExpandMap = view.findViewById<android.widget.ImageButton>(R.id.btnExpandMap)
 
-        if (isLocationLocked) btnExpandMap.visibility = View.GONE
+        if (isLocationLocked || isEditMode) btnExpandMap.visibility = View.GONE
 
         btnExpandMap.setOnClickListener {
             isMapExpanded = !isMapExpanded
@@ -382,11 +348,11 @@ class AddParkingFragment : DialogFragment() {
             val tilParkingType = view.findViewById<TextInputLayout>(R.id.tilParkingType)
             val tilNotes = view.findViewById<TextInputLayout>(R.id.tilNotes)
             val etNotes = view.findViewById<TextInputEditText>(R.id.etNotes)
-            val layoutPhotoButtonsLocal = view.findViewById<View>(R.id.layoutPhotoButtons)
             val btnSaveEverything = view.findViewById<View>(R.id.btnSaveEverything)
+
             tilParkingType.visibility = View.GONE
             tilNotes.visibility = View.GONE
-            layoutPhotoButtonsLocal.visibility = View.GONE
+            view.findViewById<Button>(R.id.btnChangePhoto).visibility = View.GONE
             btnSaveEverything.visibility = View.GONE
 
             viewLifecycleOwner.lifecycleScope.launch {
@@ -405,8 +371,9 @@ class AddParkingFragment : DialogFragment() {
                                 etNotes.setText(loc.notes ?: "")
                                 tilNotes.isEnabled = false
 
-                                // Mostra foto in modalità "LOCKED" (No bottoni, solo foto)
-                                showPhotoPreview(loc.photoPath, "LOCKED")
+                                // --- MOSTRA FOTO DALLA TENDINA (BLOCCATA) ---
+                                view.findViewById<Button>(R.id.btnChangePhoto).visibility = View.VISIBLE
+                                displayPhotoSafely(loc.photoPath, isLocked = true)
 
                                 val etHourly = view.findViewById<TextInputEditText>(R.id.etCostHourly)
                                 val etInitial = view.findViewById<TextInputEditText>(R.id.etCostInitial)
@@ -452,11 +419,7 @@ class AddParkingFragment : DialogFragment() {
 
             val tType = arguments?.getString("type") ?: "Gratis"
             view.findViewById<View>(R.id.tilParkingType).visibility = View.GONE
-            view.findViewById<TextView>(R.id.tvDisplayParkingType).apply {
-                visibility = View.VISIBLE
-                text = "Tariffa: $tType"
-                setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.parking_blue_light))
-            }
+            view.findViewById<TextView>(R.id.tvDisplayParkingType).apply { visibility = View.VISIBLE; text = "Tariffa: $tType"; setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.parking_blue_light)) }
             actvParkingType.setText(tType, false)
             updateParkingOptions(true)
 
@@ -489,9 +452,9 @@ class AddParkingFragment : DialogFragment() {
                 view.findViewById<TextInputLayout>(R.id.tilNotes).isEnabled = false
             }
 
-            // Mostra foto in modalità "LOCKED" (Senza bottoni)
+            // --- MOSTRA FOTO DALLA CARD LUOGHI (BLOCCATA) ---
             val tPhoto = arguments?.getString("photoPath")
-            showPhotoPreview(tPhoto, "LOCKED")
+            displayPhotoSafely(tPhoto, isLocked = true)
         }
 
         if (isEditMode) {
@@ -509,9 +472,9 @@ class AddParkingFragment : DialogFragment() {
             view.findViewById<TextInputEditText>(R.id.etLocationName).setText(arguments?.getString("name", ""))
             view.findViewById<TextInputEditText>(R.id.etNotes).setText(arguments?.getString("notes", ""))
 
-            // Mostra foto in modalità "EDIT" (Con bottoni)
+            // --- MOSTRA FOTO IN MODIFICA (SBLOCCATA) ---
             val tPhoto = arguments?.getString("photoPath")
-            showPhotoPreview(tPhoto, "EDIT")
+            displayPhotoSafely(tPhoto, isLocked = false)
 
             actvParkingType.setText(arguments?.getString("type", ""), false)
             updateParkingOptions(false)
@@ -537,7 +500,6 @@ class AddParkingFragment : DialogFragment() {
             if (selectedLatitude == 0.0 && !isVehicleLocked) { Toast.makeText(requireContext(), "Seleziona posizione!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
 
             val isHourly = (type == "All'ora")
-
             val costStrHourly = view.findViewById<TextInputEditText>(R.id.etCostHourly).text.toString().replace(",", ".")
             val costStrInitial = view.findViewById<TextInputEditText>(R.id.etCostInitial).text.toString().replace(",", ".")
             val costStrMax = view.findViewById<TextInputEditText>(R.id.etCostMax).text.toString().replace(",", ".")

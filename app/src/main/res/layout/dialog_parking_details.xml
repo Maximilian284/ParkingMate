@@ -65,9 +65,8 @@
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/ivDetailPhoto"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="300dp"
             android:adjustViewBounds="true"
-            android:maxHeight="400dp"
             android:scaleType="fitCenter"
             android:visibility="gone"
             android:background="#00000000"

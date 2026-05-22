@@ -15,11 +15,13 @@
         <item name="colorTertiaryContainer">@color/parking_blue_dark</item>
         <item name="colorOnTertiaryContainer">@color/white</item>
 
-        <!-- GLI ANTI-VIOLETTO SICURI -->
         <item name="android:colorControlActivated">@color/parking_blue_light</item>
         <item name="android:colorAccent">@color/parking_blue_light</item>
 
         <item name="android:statusBarColor">@color/parking_blue_dark</item>
+
+        <item name="colorOutline">@color/white</item>
+        <item name="android:textColorHint">@color/white</item>
     </style>
 
     <style name="Theme.ParkingMate" parent="Base.Theme.ParkingMate" />

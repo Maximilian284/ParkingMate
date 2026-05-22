@@ -26,8 +26,6 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
     }
 
     private lateinit var adapter: SavedLocationAdapter
-
-    // Variabili per il Filtro
     private var allLocations: List<SavedLocation> = emptyList()
     private var currentFilter = "Tutte"
 
@@ -45,7 +43,7 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                     true
                 }
                 R.id.action_filter -> {
-                    showFilterDialog() // Apriamo il popup!
+                    showFilterDialog()
                     true
                 }
                 else -> false
@@ -63,9 +61,11 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                 b.putDouble("lat", location.latitude)
                 b.putDouble("lng", location.longitude)
                 b.putString("type", location.defaultType)
+                b.putString("notes", location.notes)
                 b.putDouble("cost", location.defaultCost)
                 b.putDouble("initialCost", location.initialCost)
                 b.putDouble("maxCost", location.maxCost)
+                b.putString("photoPath", location.photoPath) // <-- FIX SALVA DATI!
                 b.putBoolean("is_location_locked", true)
                 form.arguments = b
                 form.show(childFragmentManager, "AddParkingDialog")
@@ -82,7 +82,7 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                 b.putDouble("cost", location.defaultCost)
                 b.putDouble("initialCost", location.initialCost)
                 b.putDouble("maxCost", location.maxCost)
-                b.putString("photoPath", location.photoPath)
+                b.putString("photoPath", location.photoPath) // <-- FIX SALVA DATI!
                 b.putBoolean("is_geofence_enabled", location.isGeofenceEnabled)
                 b.putBoolean("is_edit_mode", true)
                 form.arguments = b
@@ -96,7 +96,7 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.savedLocationsList.collect { list ->
                     allLocations = list
-                    applyFilter() // Filtra i dati prima di mostrarli
+                    applyFilter()
                 }
             }
         }

@@ -35,7 +35,6 @@
                 app:selectionRequired="true"
                 app:checkedButton="@+id/btnSaveFavoriteOnly">
 
-                <!-- FORZIAMO I COLORI QUI -->
                 <Button
                     android:id="@+id/btnSaveFavoriteOnly"
                     style="?attr/materialButtonOutlinedStyle"
@@ -43,6 +42,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textColor="@color/white"
+                    app:strokeColor="@color/parking_blue_light"
                     app:backgroundTint="@color/parking_blue_dark"
                     android:text="Solo Preferito" />
 
@@ -53,6 +53,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textColor="@color/white"
+                    app:strokeColor="@color/parking_blue_light"
                     app:backgroundTint="@color/parking_blue_dark"
                     android:text="Parcheggia Veicolo" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
@@ -64,6 +65,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="22sp"
                 android:textStyle="bold"
+                android:textColor="@color/white"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="8dp"
                 android:visibility="gone" />
@@ -80,8 +82,15 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    app:boxStrokeColor="@color/dynamic_border"
+                    android:textColorHint="@color/white"
+                    app:hintTextColor="@color/parking_blue_light"
                     android:hint="Nome Luogo (es. Sotto casa)">
-                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etLocationName" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etLocationName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/white" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -91,8 +100,17 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:visibility="gone"
+                    app:boxStrokeColor="@color/dynamic_border"
+                    android:textColorHint="@color/white"
+                    app:hintTextColor="@color/parking_blue_light"
+                    app:endIconTint="@color/dynamic_border"
                     android:hint="Scegli Luogo Salvato">
-                    <AutoCompleteTextView android:id="@+id/actvSelectLocation" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" />
+                    <AutoCompleteTextView
+                        android:id="@+id/actvSelectLocation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/white"
+                        android:inputType="none" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <CheckBox
@@ -104,16 +122,18 @@
                     android:layout_marginStart="8dp" />
             </LinearLayout>
 
-            <!-- NUOVO INTERRUTTORE GEOFENCE LOCALE COLORATO -->
+            <!-- INTERRUTTORE GEOFENCE LOCALE -->
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/switchLocalGeofence"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Attiva Geofence (Notifiche Area)"
+                app:useMaterialThemeColors="false"
+                android:textColor="@color/white"
                 android:layout_marginTop="8dp"
-                app:thumbTint="@color/parking_blue_light"
-                app:trackTint="@color/parking_gray_light"
-                android:visibility="gone" />
+                android:visibility="gone"
+                app:thumbTint="@color/switch_thumb"
+                app:trackTint="@color/switch_track"/>
 
             <!-- 3. TIPO DI TARIFFA E COSTI -->
             <TextView
@@ -131,8 +151,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                app:boxStrokeColor="@color/dynamic_border"
+                android:textColorHint="@color/white"
+                app:hintTextColor="@color/parking_blue_light"
+                app:endIconTint="@color/dynamic_border"
                 android:hint="Tipo di Tariffa">
-                <AutoCompleteTextView android:id="@+id/actvParkingType" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" />
+                <AutoCompleteTextView
+                    android:id="@+id/actvParkingType"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <LinearLayout
@@ -143,16 +172,53 @@
                 android:visibility="gone"
                 android:layout_marginTop="8dp">
 
-                <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Fisso Iniziale €">
-                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etCostInitial" android:inputType="numberDecimal" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    app:boxStrokeColor="@color/dynamic_border"
+                    android:textColorHint="@color/white"
+                    app:hintTextColor="@color/parking_blue_light"
+                    android:hint="Fisso Iniziale €">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCostInitial"
+                        android:inputType="numberDecimal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/white"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginHorizontal="8dp" android:hint="Costo/Ora €">
-                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etCostHourly" android:inputType="numberDecimal" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    app:boxStrokeColor="@color/dynamic_border"
+                    android:textColorHint="@color/white"
+                    app:hintTextColor="@color/parking_blue_light"
+                    android:hint="Costo/Ora €">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCostHourly"
+                        android:inputType="numberDecimal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/white"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Max €">
-                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etCostMax" android:inputType="numberDecimal" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    app:boxStrokeColor="@color/dynamic_border"
+                    android:textColorHint="@color/white"
+                    app:hintTextColor="@color/parking_blue_light"
+                    android:hint="Max €">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCostMax"
+                        android:inputType="numberDecimal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/white"/>
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
@@ -165,8 +231,21 @@
                 android:gravity="center_vertical"
                 android:layout_marginTop="8dp">
 
-                <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginEnd="8dp" android:hint="Costo Totale €">
-                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etFixedCost" android:inputType="numberDecimal" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    app:boxStrokeColor="@color/dynamic_border"
+                    android:textColorHint="@color/white"
+                    app:hintTextColor="@color/parking_blue_light"
+                    android:hint="Costo Totale €">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etFixedCost"
+                        android:inputType="numberDecimal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/white"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <Button
@@ -175,6 +254,8 @@
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
+                    android:textColor="@color/parking_blue_light"
+                    app:iconTint="@color/parking_blue_light"
                     android:text="Scadenza"
                     app:icon="@android:drawable/ic_menu_recent_history" />
             </LinearLayout>
@@ -186,6 +267,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="18sp"
                 android:textStyle="bold"
+                android:textColor="@color/white"
                 android:layout_marginTop="16dp"
                 android:visibility="gone" />
 
@@ -202,12 +284,21 @@
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    app:boxStrokeColor="@color/dynamic_border"
+                    android:textColorHint="@color/white"
+                    app:hintTextColor="@color/parking_blue_light"
+                    app:endIconTint="@color/dynamic_border"
                     android:hint="Seleziona Veicolo">
-                    <AutoCompleteTextView android:id="@+id/actvSelectVehicle" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" />
+                    <AutoCompleteTextView
+                        android:id="@+id/actvSelectVehicle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/white"
+                        android:inputType="none" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- 5. MAPPA (CON FIX SCROLL INFALLIBILE) -->
+            <!-- 5. MAPPA -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardMap"
                 android:layout_width="match_parent"
@@ -225,7 +316,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />
 
-                    <!-- NUOVO: SCUDO TRASPARENTE PER BLOCCARE LO SCROLL DELLA PAGINA -->
+                    <!-- SCUDO TRASPARENTE -->
                     <View
                         android:id="@+id/mapTransparentOverlay"
                         android:layout_width="match_parent"
@@ -269,6 +360,9 @@
                         android:layout_gravity="bottom|end"
                         android:layout_margin="8dp"
                         android:text="Posizione"
+                        android:textColor="@color/white"
+                        app:backgroundTint="@color/parking_blue_dark"
+                        app:iconTint="@color/white"
                         app:icon="@android:drawable/ic_menu_mylocation" />
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -279,11 +373,19 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                app:boxStrokeColor="@color/dynamic_border"
+                android:textColorHint="@color/white"
+                app:hintTextColor="@color/parking_blue_light"
                 android:hint="Note aggiuntive">
-                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etNotes" android:layout_width="match_parent" android:layout_height="wrap_content" android:lines="3" />
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:lines="3" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- NUOVO CONTENITORE: DUE BOTTONI AFFIANCATI -->
+            <!-- DUE BOTTONI AFFIANCATI E COLORATI -->
             <LinearLayout
                 android:id="@+id/layoutPhotoButtons"
                 android:layout_width="match_parent"
@@ -300,8 +402,8 @@
                     android:layout_marginEnd="4dp"
                     android:text="Mostra Foto"
                     android:visibility="gone"
-                    android:textColor="@color/parking_blue_light"
-                    app:strokeColor="@color/parking_blue_light"
+                    android:textColor="@color/white"
+                    app:strokeColor="@color/dynamic_border"
                     app:iconTint="@color/parking_blue_light"
                     app:icon="@android:drawable/ic_menu_gallery" />
 
@@ -313,8 +415,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
                     android:text="Aggiungi Foto"
-                    android:textColor="@color/parking_blue_light"
-                    app:strokeColor="@color/parking_blue_light"
+                    android:textColor="@color/white"
+                    app:strokeColor="@color/dynamic_border"
                     app:iconTint="@color/parking_blue_light"
                     app:icon="@android:drawable/ic_menu_camera" />
             </LinearLayout>

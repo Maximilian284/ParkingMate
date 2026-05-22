@@ -3,11 +3,10 @@ package com.example.parkingmate
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.location.Geocoder
-import android.net.Uri
 import android.os.Bundle
-import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -43,9 +42,8 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
-import android.Manifest
-import android.content.pm.PackageManager
-
+import android.graphics.BitmapFactory
+import java.io.File
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
 
@@ -92,13 +90,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             when (menuItem.itemId) {
                 R.id.action_toggle_view -> {
                     isMapMode = !isMapMode
-                    menuItem.setIcon(if (isMapMode) R.drawable.map_24px else R.drawable.list_24px)
+                    menuItem.setIcon(if (isMapMode) R.drawable.history_24px else R.drawable.parking_meter_24px) // Rimetti le tue icone corrette qui
                     updateUI()
                     true
                 }
                 R.id.action_toggle_history -> {
                     isHistoryMode = !isHistoryMode
-                    menuItem.setIcon(if (isHistoryMode) R.drawable.history_24px else R.drawable.parking_meter_24px)
                     toolbar.title = if (isHistoryMode) "Storico Parcheggi" else "Parcheggi Attivi"
                     updateUI()
                     true
@@ -123,7 +120,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                     .setNegativeButton("Annulla", null)
                     .create()
                 dialog.show()
-                // Colori: Termina = Blu Chiaro, Annulla = Grigio
                 dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(android.graphics.Color.parseColor("#4A7BC7"))
                 dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
             },
@@ -138,7 +134,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                     .setNegativeButton("Annulla", null)
                     .create()
                 dialog.show()
-                // Colori: Elimina = Rosso, Annulla = Grigio
                 dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(android.graphics.Color.RED)
                 dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
             }
@@ -171,35 +166,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 }
             }
         }
-
-        val btnPlay = view.findViewById<ImageButton>(R.id.btnPlayHistory)
-        btnPlay.setOnClickListener {
-            if (isPlaying) {
-                isPlaying = false
-                playJob?.cancel()
-                btnPlay.setImageResource(android.R.drawable.ic_media_play)
-            } else {
-                isPlaying = true
-                btnPlay.setImageResource(android.R.drawable.ic_media_pause)
-                playJob = viewLifecycleOwner.lifecycleScope.launch {
-                    var currentVal = sliderTime.value
-                    if (currentVal >= 1440f) currentVal = 0f
-                    while (isPlaying && currentVal < 1440f) {
-                        currentVal += 30f
-                        sliderTime.value = currentVal
-                        val hours = (currentVal / 60).toInt()
-                        val minutes = (currentVal % 60).toInt()
-                        currentCalendar.set(Calendar.HOUR_OF_DAY, hours)
-                        currentCalendar.set(Calendar.MINUTE, minutes)
-                        updateSliderText()
-                        updateMapMarkers(moveCamera = false)
-                        kotlinx.coroutines.delay(350)
-                    }
-                    isPlaying = false
-                    btnPlay.setImageResource(android.R.drawable.ic_media_play)
-                }
-            }
-        }
     }
 
     private fun showParkingDetailsDialog(item: SessionWithVehicle) {
@@ -215,32 +181,46 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val tvNotes = dialogView.findViewById<TextView>(R.id.tvDetailNotes)
         val ivPhoto = dialogView.findViewById<ImageView>(R.id.ivDetailPhoto)
 
-        val customTitle = "${session.locationName?.takeIf { it.isNotBlank() } ?: session.note?.takeIf {it.isNotBlank()} ?: "Informazioni Parcheggio"}"
+        val customTitle = session.locationName?.takeIf { it.isNotBlank() } ?: session.note?.takeIf { it.isNotBlank() } ?: "Informazioni Parcheggio"
         tvTitle.text = customTitle
         tvVehicle.text = "Veicolo: ${vehicle.name} (${vehicle.type})"
         val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
         tvStartDate.text = "Inizio: ${dateFormat.format(session.startTime)}"
 
         val tariffTranslated = when(session.type) {
-            "Free" -> "Sosta Libera"
-            "Hourly" -> "A Ore"
-            "Fixed" -> "Ticket Fisso"
+            "Free", "Gratis" -> "Gratuita"
+            "Hourly", "All'ora" -> "Oraria"
+            "Fixed", "Costo Fisso", "Già Pagato" -> "Ticket Fisso"
             else -> session.type
         }
-        tvTariff.text = "Tariffa: $tariffTranslated"
 
-        if (!session.note.isNullOrBlank()) {
+        // --- RIMESSO I PREZZI FORMATTATI BENE ---
+        var tariffText = "Tariffa: $tariffTranslated"
+        if (session.type == "All'ora" || session.type == "Hourly") {
+            tariffText += "\n"
+            if (session.initialCost > 0) tariffText += "• Fisso Iniziale: ${String.format(Locale.getDefault(), "%.2f €", session.initialCost)}\n"
+            if (session.cost > 0) tariffText += "• Costo/Ora: ${String.format(Locale.getDefault(), "%.2f €", session.cost)}\n"
+            if (session.maxCost > 0) tariffText += "• Max Giornaliero: ${String.format(Locale.getDefault(), "%.2f €", session.maxCost)}"
+        } else if (session.cost > 0) {
+            tariffText += " (${String.format(Locale.getDefault(), "%.2f €", session.cost)})"
+        }
+        tvTariff.text = tariffText.trimEnd()
+
+        if (!session.note.isNullOrBlank() && session.note != customTitle) {
             tvNotes.visibility = View.VISIBLE
             tvNotes.text = "Note: ${session.note}"
+        } else {
+            tvNotes.visibility = View.GONE
         }
 
-        // --- FIX FOTO: Trasformiamo il percorso testuale in un file reale ---
+        // --- FIX FOTO ESTREMO: BitmapFactory costringe Android a mostrare l'immagine ---
         if (!session.photoPath.isNullOrBlank()) {
             try {
-                val imageFile = java.io.File(session.photoPath)
+                val imageFile = File(session.photoPath!!)
                 if (imageFile.exists()) {
                     ivPhoto.visibility = View.VISIBLE
-                    ivPhoto.setImageURI(android.net.Uri.fromFile(imageFile))
+                    val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
+                    ivPhoto.setImageBitmap(bitmap)
                 } else {
                     ivPhoto.visibility = View.GONE
                 }
@@ -248,6 +228,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 e.printStackTrace()
                 ivPhoto.visibility = View.GONE
             }
+        } else {
+            ivPhoto.visibility = View.GONE
         }
 
         val dialog = MaterialAlertDialogBuilder(requireContext())
@@ -257,7 +239,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             .create()
 
         dialog.show()
-        // Colori richiesti da te: Chiudi = Blu Chiaro, Modifica Ora = Grigio Chiaro
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(android.graphics.Color.parseColor("#4A7BC7"))
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL)?.setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
 
@@ -268,7 +249,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 val locationName = if (!addresses.isNullOrEmpty()) addresses[0].getAddressLine(0) else "Lat: ${session.latitude}, Lon: ${session.longitude}"
                 withContext(Dispatchers.Main) { tvLocation.text = locationName }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { tvLocation.text = "Posizione non disponibile" }
+                withContext(Dispatchers.Main) { tvLocation.text = "Posizione non disponibile offline" }
             }
         }
     }
