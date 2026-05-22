@@ -90,13 +90,14 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             when (menuItem.itemId) {
                 R.id.action_toggle_view -> {
                     isMapMode = !isMapMode
-                    menuItem.setIcon(if (isMapMode) R.drawable.history_24px else R.drawable.parking_meter_24px) // Rimetti le tue icone corrette qui
+                    menuItem.setIcon(if (isMapMode) R.drawable.map_24px else R.drawable.list_24px)
                     updateUI()
                     true
                 }
                 R.id.action_toggle_history -> {
                     isHistoryMode = !isHistoryMode
                     toolbar.title = if (isHistoryMode) "Storico Parcheggi" else "Parcheggi Attivi"
+                    menuItem.setIcon(if (isHistoryMode) R.drawable.history_24px else R.drawable.parking_meter_24px)
                     updateUI()
                     true
                 }
@@ -163,6 +164,36 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                         historyList = list
                         if (isHistoryMode) updateUI()
                     }
+                }
+            }
+        }
+
+        // --- CODICE DEL TASTO PLAY REINSERITO! ---
+        val btnPlay = view.findViewById<ImageButton>(R.id.btnPlayHistory)
+        btnPlay.setOnClickListener {
+            if (isPlaying) {
+                isPlaying = false
+                playJob?.cancel()
+                btnPlay.setImageResource(android.R.drawable.ic_media_play)
+            } else {
+                isPlaying = true
+                btnPlay.setImageResource(android.R.drawable.ic_media_pause)
+                playJob = viewLifecycleOwner.lifecycleScope.launch {
+                    var currentVal = sliderTime.value
+                    if (currentVal >= 1440f) currentVal = 0f
+                    while (isPlaying && currentVal < 1440f) {
+                        currentVal += 30f
+                        sliderTime.value = currentVal
+                        val hours = (currentVal / 60).toInt()
+                        val minutes = (currentVal % 60).toInt()
+                        currentCalendar.set(Calendar.HOUR_OF_DAY, hours)
+                        currentCalendar.set(Calendar.MINUTE, minutes)
+                        updateSliderText()
+                        updateMapMarkers(moveCamera = false)
+                        kotlinx.coroutines.delay(350)
+                    }
+                    isPlaying = false
+                    btnPlay.setImageResource(android.R.drawable.ic_media_play)
                 }
             }
         }
