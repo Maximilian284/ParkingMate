@@ -7,7 +7,7 @@
     <item
         android:id="@+id/navigation_saved_locations"
         android:icon="@drawable/near_me_24px"
-        android:title="Luoghi" />
+        android:title="Parcheggi" />
     <item
         android:id="@+id/navigation_vehicles"
         android:icon="@drawable/directions_car_24px"

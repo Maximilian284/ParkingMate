@@ -11,14 +11,15 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.parkingmate.adapter.SavedLocationAdapter
 import com.example.parkingmate.data.AppDatabase
+import com.example.parkingmate.data.SavedLocation
 import com.example.parkingmate.viewmodel.ParkMateViewModel
 import com.example.parkingmate.viewmodel.ParkMateViewModelFactory
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
 class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
 
-    // 1. Inizializza il ViewModel condiviso
     private val viewModel: ParkMateViewModel by activityViewModels {
         val db = AppDatabase.getDatabase(requireContext().applicationContext)
         ParkMateViewModelFactory(requireActivity().application, db.appDao())
@@ -26,10 +27,13 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
 
     private lateinit var adapter: SavedLocationAdapter
 
+    // Variabili per il Filtro
+    private var allLocations: List<SavedLocation> = emptyList()
+    private var currentFilter = "Tutte"
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 2. Configura la Toolbar e il tasto "+"
         val toolbar = view.findViewById<MaterialToolbar>(R.id.topAppBarLocations)
         toolbar.inflateMenu(R.menu.menu_vehicles)
 
@@ -40,11 +44,14 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                     addParkingForm.show(childFragmentManager, "AddParkingDialog")
                     true
                 }
+                R.id.action_filter -> {
+                    showFilterDialog() // Apriamo il popup!
+                    true
+                }
                 else -> false
             }
         }
 
-        // 3. Configura la RecyclerView
         val rv = view.findViewById<RecyclerView>(R.id.rvLocations)
         adapter = SavedLocationAdapter(
             locations = emptyList(),
@@ -57,8 +64,6 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                 b.putDouble("lng", location.longitude)
                 b.putString("type", location.defaultType)
                 b.putDouble("cost", location.defaultCost)
-                b.putString("notes", location.notes)
-                b.putString("photoPath", location.photoPath)
                 b.putDouble("initialCost", location.initialCost)
                 b.putDouble("maxCost", location.maxCost)
                 b.putBoolean("is_location_locked", true)
@@ -74,11 +79,11 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                 b.putDouble("lng", location.longitude)
                 b.putString("type", location.defaultType)
                 b.putString("notes", location.notes)
-                b.putString("photoPath", location.photoPath)
                 b.putDouble("cost", location.defaultCost)
                 b.putDouble("initialCost", location.initialCost)
                 b.putDouble("maxCost", location.maxCost)
-                b.putBoolean("is_geofence_enabled", location.isGeofenceEnabled) // <--- NUOVO: Passiamo lo stato!
+                b.putString("photoPath", location.photoPath)
+                b.putBoolean("is_geofence_enabled", location.isGeofenceEnabled)
                 b.putBoolean("is_edit_mode", true)
                 form.arguments = b
                 form.show(childFragmentManager, "AddParkingDialog")
@@ -87,13 +92,38 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
         rv.layoutManager = LinearLayoutManager(requireContext())
         rv.adapter = adapter
 
-        // 4. Osserva i dati dal Database in tempo reale!
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.savedLocationsList.collect { list ->
-                    adapter.updateData(list) // Aggiorna l'interfaccia istantaneamente
+                    allLocations = list
+                    applyFilter() // Filtra i dati prima di mostrarli
                 }
             }
         }
+    }
+
+    private fun showFilterDialog() {
+        val opzioni = arrayOf("Tutte", "Gratis", "All'ora", "Costo Fisso")
+        val currentIndex = opzioni.indexOf(currentFilter).takeIf { it >= 0 } ?: 0
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Filtra per Tariffa")
+            .setSingleChoiceItems(opzioni, currentIndex) { dialog, which ->
+                currentFilter = opzioni[which]
+                applyFilter()
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun applyFilter() {
+        val filteredList = if (currentFilter == "Tutte") {
+            allLocations
+        } else {
+            allLocations.filter {
+                it.defaultType == currentFilter || (currentFilter == "Costo Fisso" && it.defaultType == "Già Pagato")
+            }
+        }
+        adapter.updateData(filteredList)
     }
 }

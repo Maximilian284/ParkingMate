@@ -28,15 +28,18 @@ class GeofenceReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
 
-        // --- GESTIONE FIX 3: L'UTENTE SI È APPENA FERMATO (DOPO ESSERE ENTRATO IN AUTO) ---
+        // --- 1. GESTIONE: L'UTENTE HA PARCHEGGIATO (È FERMO O STA CAMMINANDO) ---
         if (intent.action == "WAIT_FOR_STOP") {
             if (ActivityTransitionResult.hasResult(intent)) {
                 val result = ActivityTransitionResult.extractResult(intent)
                 for (event in result!!.transitionEvents) {
-                    if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER &&
-                        event.activityType == DetectedActivity.STILL) {
 
-                        // Siamo fermi! Procediamo con l'offerta del parcheggio
+                    // FIX: Ora accettiamo non solo che sia FERMO, ma anche che stia CAMMINANDO!
+                    if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER &&
+                        (event.activityType == DetectedActivity.STILL ||
+                                event.activityType == DetectedActivity.WALKING ||
+                                event.activityType == DetectedActivity.ON_FOOT)) {
+
                         val locId = intent.getIntExtra("LOCATION_ID", -1)
                         val name = intent.getStringExtra("LOCATION_NAME") ?: ""
                         val lat = intent.getDoubleExtra("LOCATION_LAT", 0.0)
@@ -47,7 +50,7 @@ class GeofenceReceiver : BroadcastReceiver() {
                             sendEnterNotification(context, locId, name, lat, lng, type)
                         }
 
-                        // Spegniamo l'ascolto dei sensori per risparmiare la batteria
+                        // Spegniamo l'ascolto dei sensori per risparmiare batteria
                         val pi = PendingIntent.getBroadcast(context, 100, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
                         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
                             ActivityRecognition.getClient(context).removeActivityTransitionUpdates(pi)
@@ -58,7 +61,7 @@ class GeofenceReceiver : BroadcastReceiver() {
             return
         }
 
-        // --- GESTIONE INGRESSO/USCITA STANDARD (GPS) ---
+        // --- 2. GESTIONE INGRESSO/USCITA DAL RECINTO ---
         val geofencingEvent = GeofencingEvent.fromIntent(intent)
         if (geofencingEvent == null || geofencingEvent.hasError()) return
 
@@ -68,8 +71,11 @@ class GeofenceReceiver : BroadcastReceiver() {
         if (triggeringGeofences.isEmpty()) return
         val geofenceId = triggeringGeofences[0].requestId.toIntOrNull() ?: return
 
-        // Otteniamo la velocità di attraversamento del Geofence (metri al secondo)
-        val speed = geofencingEvent.triggeringLocation?.speed ?: 0f
+        val speed = if (geofencingEvent.triggeringLocation?.hasSpeed() == true) {
+            geofencingEvent.triggeringLocation!!.speed
+        } else {
+            -1f
+        }
 
         val pendingResult = goAsync()
 
@@ -79,25 +85,22 @@ class GeofenceReceiver : BroadcastReceiver() {
                 val location = db.appDao().getAllLocations().first().find { it.id == geofenceId }
 
                 if (location != null) {
-
                     if (transition == Geofence.GEOFENCE_TRANSITION_ENTER) {
-                        // FIX 3 (A): Se superi i 10.8 km/h (3.0 m/s), diamo per certo che sei su un veicolo.
-                        // Ci mettiamo in ascolto SILENZIOSO in attesa che tu ti fermi.
-                        if (speed > 3.0f) {
+                        // Se entri veloce o a velocità incerta, ci mettiamo in ascolto dei tuoi prossimi passi
+                        if (speed > 2.5f || speed == -1f) {
                             registerForStopEvent(context, location)
                         }
                     }
                     else if (transition == Geofence.GEOFENCE_TRANSITION_EXIT) {
-                        // Per precauzione disattiviamo le richieste di fermata precedenti
+                        // Disattiviamo l'attesa se ne usciamo
                         val stopIntent = Intent(context, GeofenceReceiver::class.java).apply { action = "WAIT_FOR_STOP" }
                         val stopPi = PendingIntent.getBroadcast(context, 100, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
                         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
                             ActivityRecognition.getClient(context).removeActivityTransitionUpdates(stopPi)
                         }
 
-                        // FIX 2: Manda la notifica di Terminare SOLO se sei ad almeno 12.6 km/h (3.5 m/s)
-                        // Quindi se sei a piedi (< 3.5 m/s), la ignora e il parcheggio rimane intatto!
-                        if (speed > 3.5f) {
+                        // Manda la notifica di uscita solo se vai a velocità da auto
+                        if (speed > 2.5f || speed == -1f) {
                             val activeParkings = db.appDao().getActiveParkings().first()
                             val activeSession = activeParkings.find {
                                 Math.abs(it.session.latitude - location.latitude) < 0.001 &&
@@ -119,8 +122,17 @@ class GeofenceReceiver : BroadcastReceiver() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) return
 
         val transitions = mutableListOf<ActivityTransition>()
+        // Ascoltiamo 3 eventi: Fermo, in Camminata o A Piedi.
         transitions.add(ActivityTransition.Builder()
             .setActivityType(DetectedActivity.STILL)
+            .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+            .build())
+        transitions.add(ActivityTransition.Builder()
+            .setActivityType(DetectedActivity.WALKING)
+            .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+            .build())
+        transitions.add(ActivityTransition.Builder()
+            .setActivityType(DetectedActivity.ON_FOOT)
             .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
             .build())
 

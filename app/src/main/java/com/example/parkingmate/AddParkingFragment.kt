@@ -452,7 +452,11 @@ class AddParkingFragment : DialogFragment() {
 
             val tType = arguments?.getString("type") ?: "Gratis"
             view.findViewById<View>(R.id.tilParkingType).visibility = View.GONE
-            view.findViewById<TextView>(R.id.tvDisplayParkingType).apply { visibility = View.VISIBLE; text = "Tariffa: $tType" }
+            view.findViewById<TextView>(R.id.tvDisplayParkingType).apply {
+                visibility = View.VISIBLE
+                text = "Tariffa: $tType"
+                setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.parking_blue_light))
+            }
             actvParkingType.setText(tType, false)
             updateParkingOptions(true)
 

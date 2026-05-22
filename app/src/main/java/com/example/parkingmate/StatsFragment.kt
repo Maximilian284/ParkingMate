@@ -93,9 +93,9 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
             viewMode = (viewMode + 1) % 3
 
             when (viewMode) {
-                0 -> { btnToggle.text = "Grafico Costi"; btnToggle.setIconResource(android.R.drawable.ic_menu_sort_by_size) }
-                1 -> { btnToggle.text = "Mappa Termica"; btnToggle.setIconResource(android.R.drawable.ic_dialog_map) }
-                2 -> { btnToggle.text = "Mappa Sforzo"; btnToggle.setIconResource(android.R.drawable.ic_menu_directions) }
+                0 -> { btnToggle.text = "Grafico Costi"; btnToggle.setIconResource(R.drawable.bar_chart_4_bars_24px) }
+                1 -> { btnToggle.text = "Mappa Termica"; btnToggle.setIconResource(R.drawable.map_24px) }
+                2 -> { btnToggle.text = "Mappa Sforzo"; btnToggle.setIconResource(R.drawable.directions_run_24px) }
             }
             updateVisibility()
             processData()

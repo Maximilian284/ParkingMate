@@ -112,7 +112,7 @@
                 android:text="Attiva Geofence (Notifiche Area)"
                 android:layout_marginTop="8dp"
                 app:thumbTint="@color/parking_blue_light"
-                app:trackTint="@color/parking_gray"
+                app:trackTint="@color/parking_gray_light"
                 android:visibility="gone" />
 
             <!-- 3. TIPO DI TARIFFA E COSTI -->
@@ -300,6 +300,9 @@
                     android:layout_marginEnd="4dp"
                     android:text="Mostra Foto"
                     android:visibility="gone"
+                    android:textColor="@color/parking_blue_light"
+                    app:strokeColor="@color/parking_blue_light"
+                    app:iconTint="@color/parking_blue_light"
                     app:icon="@android:drawable/ic_menu_gallery" />
 
                 <Button
@@ -310,6 +313,9 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
                     android:text="Aggiungi Foto"
+                    android:textColor="@color/parking_blue_light"
+                    app:strokeColor="@color/parking_blue_light"
+                    app:iconTint="@color/parking_blue_light"
                     app:icon="@android:drawable/ic_menu_camera" />
             </LinearLayout>
 
@@ -352,6 +358,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            app:backgroundTint="@color/parking_blue_light"
+            android:textColor="@color/white"
             android:text="SALVA" />
     </LinearLayout>
 

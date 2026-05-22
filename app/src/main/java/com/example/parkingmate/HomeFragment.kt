@@ -46,6 +46,7 @@ import java.util.Locale
 import android.Manifest
 import android.content.pm.PackageManager
 
+
 class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private val viewModel: ParkMateViewModel by activityViewModels {
@@ -91,13 +92,13 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             when (menuItem.itemId) {
                 R.id.action_toggle_view -> {
                     isMapMode = !isMapMode
-                    menuItem.setIcon(if (isMapMode) android.R.drawable.ic_dialog_map else android.R.drawable.ic_menu_sort_by_size)
+                    menuItem.setIcon(if (isMapMode) R.drawable.map_24px else R.drawable.list_24px)
                     updateUI()
                     true
                 }
                 R.id.action_toggle_history -> {
                     isHistoryMode = !isHistoryMode
-                    menuItem.setIcon(if (isHistoryMode) android.R.drawable.ic_menu_recent_history else android.R.drawable.ic_menu_info_details)
+                    menuItem.setIcon(if (isHistoryMode) R.drawable.history_24px else R.drawable.parking_meter_24px)
                     toolbar.title = if (isHistoryMode) "Storico Parcheggi" else "Parcheggi Attivi"
                     updateUI()
                     true
