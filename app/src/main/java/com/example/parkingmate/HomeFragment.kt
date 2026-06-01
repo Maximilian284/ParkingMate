@@ -168,7 +168,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             }
         }
 
-        // --- CODICE DEL TASTO PLAY REINSERITO! ---
         val btnPlay = view.findViewById<ImageButton>(R.id.btnPlayHistory)
         btnPlay.setOnClickListener {
             if (isPlaying) {
@@ -176,6 +175,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 playJob?.cancel()
                 btnPlay.setImageResource(android.R.drawable.ic_media_play)
             } else {
+                // Avvia una coroutine che simula la riproduzione temporale dello storico, avanzando il tempo
+                // e aggiornando slider e mappa in modo progressivo.
                 isPlaying = true
                 btnPlay.setImageResource(android.R.drawable.ic_media_pause)
                 playJob = viewLifecycleOwner.lifecycleScope.launch {
@@ -225,7 +226,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             else -> session.type
         }
 
-        // --- RIMESSO I PREZZI FORMATTATI BENE ---
         var tariffText = "Tariffa: $tariffTranslated"
         if (session.type == "All'ora" || session.type == "Hourly") {
             tariffText += "\n"
@@ -244,7 +244,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             tvNotes.visibility = View.GONE
         }
 
-        // --- FIX FOTO ESTREMO: BitmapFactory costringe Android a mostrare l'immagine ---
         if (!session.photoPath.isNullOrBlank()) {
             try {
                 val imageFile = File(session.photoPath!!)
@@ -273,6 +272,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(android.graphics.Color.parseColor("#4A7BC7"))
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL)?.setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
 
+        // Esegue la geocodifica inversa su thread I/O per evitare blocchi del thread principale.
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val geocoder = Geocoder(requireContext(), Locale.getDefault())
@@ -371,6 +371,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             val selected = currentCalendar.timeInMillis
             for (item in historyList) {
                 val start = item.session.startTime; val end = item.session.endTime ?: start
+                // Determina quali parcheggi sono attivi nell'intervallo temporale selezionato nella simulazione.
                 if (selected in start..end) {
                     val pos = LatLng(item.session.latitude, item.session.longitude)
                     map.addMarker(MarkerOptions().position(pos).title(item.vehicle.name).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)))

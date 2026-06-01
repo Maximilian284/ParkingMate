@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:fitsSystemWindows="true">
 
-    <!-- La barra in alto -->
+    <!-- Barra superiore con titolo e navigazione -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/topAppBar"
         android:layout_width="match_parent"
@@ -14,7 +14,7 @@
         android:background="?attr/colorPrimaryContainer"
         app:title="Veicoli" />
 
-    <!-- La lista dei veicoli -->
+    <!-- Elenco veicoli salvati -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvVehicles"
         android:layout_width="match_parent"

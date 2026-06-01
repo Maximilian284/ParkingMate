@@ -67,6 +67,8 @@ class WalkingTrackerService : Service() {
                     val result = ActivityTransitionResult.extractResult(intent)
                     for (event in result!!.transitionEvents) {
                         if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER && event.activityType == DetectedActivity.STILL) {
+                            // Avvia un timer di inattività: se l'utente rimane fermo per un intervallo continuo,
+                            // il tracciamento viene terminato automaticamente per evitare falsi positivi di camminata.
                             if (stillTimerJob == null || !stillTimerJob!!.isActive) {
                                 stillTimerJob = CoroutineScope(Dispatchers.Main).launch {
                                     delay(WAIT_TIME_MILLIS)
@@ -77,6 +79,7 @@ class WalkingTrackerService : Service() {
                             stopTrackingAndSave()
                         } else if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER &&
                             (event.activityType == DetectedActivity.WALKING || event.activityType == DetectedActivity.ON_FOOT)) {
+                            // Interrompe il timer di stop automatico quando viene rilevato nuovamente movimento.
                             stillTimerJob?.cancel()
                         }
                     }
@@ -118,6 +121,7 @@ class WalkingTrackerService : Service() {
             activityRecognitionClient.removeActivityTransitionUpdates(pendingIntent)
         }
 
+        // Correzione della durata effettiva sottraendo il periodo di attesa iniziale prima della conferma di inattività.
         val durationSeconds = ((System.currentTimeMillis() - startTimeMillis) - WAIT_TIME_MILLIS) / 1000
         val finalDuration = if (durationSeconds > 0) durationSeconds else 0L
 
@@ -134,7 +138,7 @@ class WalkingTrackerService : Service() {
     private fun startForegroundService() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "Tracciamento Sforzo", NotificationManager.IMPORTANCE_DEFAULT) // Priorità DEFAULT!
+            val channel = NotificationChannel(CHANNEL_ID, "Tracciamento Sforzo", NotificationManager.IMPORTANCE_DEFAULT)
             notificationManager.createNotificationChannel(channel)
         }
 
@@ -146,7 +150,7 @@ class WalkingTrackerService : Service() {
             .setContentTitle("Parking Effort Attivo")
             .setContentText("Rilevamento destinazione in background...")
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "CHIUDI E SALVA", stopPendingIntent)
-            .setOngoing(true) // Ora la notifica è ben visibile!
+            .setOngoing(true)
             .build()
 
         startForeground(NOTIFICATION_ID, notification)

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Blu Principale (Scuri e Chiari) -->
     <color name="parking_blue">#1E519D</color>
     <color name="parking_blue_dark">#133B78</color>
     <color name="parking_blue_light">#4A7BC7</color>

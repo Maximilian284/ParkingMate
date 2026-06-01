@@ -11,7 +11,6 @@ import com.example.parkingmate.data.ParkingSession
 object AlarmHelper {
 
     fun scheduleFixedTicketAlarms(context: Context, session: ParkingSession, vehicleName: String) {
-        // 1. IL BUG ERA QUI! Ora accettiamo "Già Pagato", "Costo Fisso" o "Fixed"
         if (session.endTime == null) return
         if (session.type != "Già Pagato" && session.type != "Costo Fisso" && session.type != "Fixed") return
 
@@ -26,16 +25,16 @@ object AlarmHelper {
         val expiryTime = session.endTime
         val warningTime = expiryTime - (minutesBefore * 60 * 1000)
 
-        // 2. PIANO B PER I PERMESSI: Se Android 14+ vieta gli allarmi esatti, usiamo un allarme standard
         val canSetExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
 
-        // --- ALLARME AVVISO PREVENTIVO ---
         if (warningTime > System.currentTimeMillis()) {
             val warningIntent = Intent(context, AlarmReceiver::class.java).apply {
                 putExtra("VEHICLE_NAME", vehicleName)
                 putExtra("IS_EXPIRY", false)
                 putExtra("PARKING_ID", session.id)
             }
+            // Vengono utilizzati request code distinti per consentire la gestione
+            // indipendente della notifica preventiva e di quella di scadenza.
             val warningPendingIntent = PendingIntent.getBroadcast(
                 context, session.id * 10, warningIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -48,7 +47,6 @@ object AlarmHelper {
             }
         }
 
-        // --- ALLARME SCADENZA VERA E PROPRIA ---
         if (expiryTime > System.currentTimeMillis()) {
             val expiryIntent = Intent(context, AlarmReceiver::class.java).apply {
                 putExtra("VEHICLE_NAME", vehicleName)
@@ -66,10 +64,8 @@ object AlarmHelper {
                 alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, expiryTime, expiryPendingIntent)
             }
 
-            // 3. CONFERMA VISIVA PER VOI!
             Toast.makeText(context, "Sveglia impostata! Il telefono suonerà all'orario previsto.", Toast.LENGTH_LONG).show()
         } else {
-            // Se mettete un orario nel passato, ve lo dice!
             Toast.makeText(context, "Attenzione: la scadenza inserita è già passata!", Toast.LENGTH_LONG).show()
         }
     }

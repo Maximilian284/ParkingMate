@@ -158,7 +158,8 @@ class AddParkingFragment : DialogFragment() {
         val prefs = requireContext().getSharedPreferences("ParkingMatePrefs", Context.MODE_PRIVATE)
         val isGlobalGeofenceOn = prefs.getBoolean("geofence_global_enabled", false)
 
-        // --- FUNZIONE PER MOSTRARE LA FOTO CON BITMAP FACTORY ---
+        // Carica e visualizza una foto salvata localmente, gestendo file mancanti
+        // o errori di lettura senza interrompere il flusso dell'interfaccia.
         fun displayPhotoSafely(path: String?, isLocked: Boolean) {
             val ivPreview = view.findViewById<ImageView>(R.id.ivPhotoPreview)
             val btnAddPhoto = view.findViewById<Button>(R.id.btnChangePhoto)
@@ -243,6 +244,8 @@ class AddParkingFragment : DialogFragment() {
             }
         }
 
+        // Permette alla MapView di ricevere gli eventi touch senza impedire
+        // lo scorrimento del contenitore quando l'interazione con la mappa termina.
         val mapOverlay = view.findViewById<View>(R.id.mapTransparentOverlay)
         mapOverlay?.setOnTouchListener { _, event ->
             when (event.actionMasked) {
@@ -371,7 +374,6 @@ class AddParkingFragment : DialogFragment() {
                                 etNotes.setText(loc.notes ?: "")
                                 tilNotes.isEnabled = false
 
-                                // --- MOSTRA FOTO DALLA TENDINA (BLOCCATA) ---
                                 view.findViewById<Button>(R.id.btnChangePhoto).visibility = View.VISIBLE
                                 displayPhotoSafely(loc.photoPath, isLocked = true)
 
@@ -452,7 +454,6 @@ class AddParkingFragment : DialogFragment() {
                 view.findViewById<TextInputLayout>(R.id.tilNotes).isEnabled = false
             }
 
-            // --- MOSTRA FOTO DALLA CARD LUOGHI (BLOCCATA) ---
             val tPhoto = arguments?.getString("photoPath")
             displayPhotoSafely(tPhoto, isLocked = true)
         }
@@ -472,7 +473,6 @@ class AddParkingFragment : DialogFragment() {
             view.findViewById<TextInputEditText>(R.id.etLocationName).setText(arguments?.getString("name", ""))
             view.findViewById<TextInputEditText>(R.id.etNotes).setText(arguments?.getString("notes", ""))
 
-            // --- MOSTRA FOTO IN MODIFICA (SBLOCCATA) ---
             val tPhoto = arguments?.getString("photoPath")
             displayPhotoSafely(tPhoto, isLocked = false)
 
@@ -525,6 +525,8 @@ class AddParkingFragment : DialogFragment() {
                 val vehicle = currentVehicles.find { "${it.name} (${it.type})" == selectedVehicleName }
                 if (vehicle == null) { Toast.makeText(requireContext(), "Seleziona un veicolo!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
 
+                // Centralizza la logica comune di creazione della sessione, eventuale
+                // salvataggio tra i preferiti e avvio del tracciamento dello spostamento.
                 val saveAndTrackLogic = { shouldTrack: Boolean, feedbackMsg: String ->
                     viewModel.addParkingSession(vehicle.id, vehicle.name, name, type, selectedLatitude, selectedLongitude, notes, savedPhotoPath, finalCost, finalInitial, finalMax, fixedEndTimeMillis) { newId ->
 
@@ -547,6 +549,8 @@ class AddParkingFragment : DialogFragment() {
                     }
                 }
 
+                // Il tracciamento viene avviato solo se abilitato globalmente e se la
+                // posizione corrente risulta sufficientemente vicina al punto di parcheggio.
                 val isEffortGloballyEnabled = prefs.getBoolean("effort_global_enabled", false)
                 if (!isEffortGloballyEnabled) {
                     saveAndTrackLogic(false, "Parcheggio salvato! (Tracciamento sforzo disabilitato in Impostazioni)")

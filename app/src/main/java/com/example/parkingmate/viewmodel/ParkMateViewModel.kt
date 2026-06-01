@@ -19,7 +19,7 @@ class ParkMateViewModel(private val application: Application, private val dao: A
     val vehiclesList: StateFlow<List<Vehicle>> = dao.getAllVehicles()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000), // Ottimizza la batteria
+            started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
@@ -87,16 +87,15 @@ class ParkMateViewModel(private val application: Application, private val dao: A
         viewModelScope.launch {
             val now = System.currentTimeMillis()
 
-            // --- REQUISITO PROFESSORE: CHIUDI I VECCHI PARCHEGGI ATTIVI DELLO STESSO VEICOLO ---
+            // Garantisce l'esistenza di una sola sessione attiva per veicolo,
+            // chiudendo automaticamente eventuali parcheggi precedenti.
             val oldSessions = dao.getActiveParkingsForVehicle(vehicleId)
             for (oldSession in oldSessions) {
                 val finishedSession = oldSession.copy(isActive = false, endTime = now)
-                dao.updateSession(finishedSession) // Spostato nello storico con i dati definitivi!
-                AlarmHelper.cancelAlarms(application.applicationContext, oldSession.id) // Cancella eventuali notifiche rimaste pendenti
+                dao.updateSession(finishedSession)
+                AlarmHelper.cancelAlarms(application.applicationContext, oldSession.id)
             }
-            // -----------------------------------------------------------------------------------
 
-            // --- CREA IL NUOVO PARCHEGGIO ---
             val session = ParkingSession(
                 vehicleId = vehicleId, locationName = locationName, type = type,
                 startTime = now, latitude = lat, longitude = lng,
@@ -108,13 +107,12 @@ class ParkMateViewModel(private val application: Application, private val dao: A
             val newId = dao.insertSession(session).toInt()
             val savedSession = session.copy(id = newId)
 
-            // Imposta i nuovi allarmi / notifiche
+            // Configura le notifiche associate alla nuova sessione in base alla tariffa selezionata.
             AlarmHelper.scheduleFixedTicketAlarms(application.applicationContext, savedSession, vehicleName)
             if (type == "All'ora" || type == "Hourly") {
                 WorkManagerHelper.startOrUpdatePeriodicWork(application.applicationContext)
             }
 
-            // Restituisce l'ID al frammento in primo piano per far partire l'Effort Score
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 onSessionSaved?.invoke(newId)
             }

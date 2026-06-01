@@ -18,7 +18,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- STATO 1: LA LISTA SCORREVOLE -->
+        <!-- Lista parcheggi attivi (RecyclerView principale) -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvHomeParkings"
             android:layout_width="match_parent"
@@ -26,7 +26,7 @@
             android:padding="8dp"
             android:clipToPadding="false" />
 
-        <!-- STATO 2: LA MAPPA (Nascosta di default) -->
+        <!-- Mappa parcheggi (vista alternativa nascosta di default) -->
         <RelativeLayout
             android:id="@+id/layoutMapContainer"
             android:layout_width="match_parent"
@@ -38,7 +38,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
 
-            <!-- CONTROLLI STORICO: Slider in basso (Nascosti di default) -->
+            <!-- Controlli modalità storico (slider temporale) -->
             <LinearLayout
                 android:id="@+id/layoutHistoryControls"
                 android:layout_width="match_parent"

@@ -10,9 +10,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun appDao(): AppDao
 
     companion object {
+        // Garantisce la visibilità immediata delle modifiche della variabile tra thread diversi.
+        // Evita problemi di caching locale in scenari multithread.
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        // Restituisce l'istanza del database; se non esiste, la crea in modo safe.
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(

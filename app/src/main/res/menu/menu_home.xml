@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <!-- Pulsante 1: Switch Mappa / Lista -->
+    <!-- Toggle vista mappa/lista -->
     <item
         android:id="@+id/action_toggle_view"
         android:icon="@drawable/list_24px"
         android:title="Vista"
         app:showAsAction="always" />
-    <!-- Pulsante 2: Switch Storico / Attivi -->
+    <!-- Toggle attivi/storico -->
     <item
         android:id="@+id/action_toggle_history"
         android:icon="@drawable/parking_meter_24px"

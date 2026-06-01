@@ -2,12 +2,14 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- Filtri statistiche -->
     <item
         android:id="@+id/action_filter_stats"
         android:icon="@android:drawable/ic_menu_sort_by_size"
         android:title="Filtra"
         app:showAsAction="ifRoom" />
 
+    <!-- Toggle vista statistiche (grafico/mappa) -->
     <item
         android:id="@+id/action_toggle_stats_view"
         android:icon="@android:drawable/ic_dialog_map"

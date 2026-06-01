@@ -1,25 +1,30 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Base.Theme.ParkingMate" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Colori primari dell'app -->
         <item name="colorPrimary">@color/parking_blue</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorPrimaryContainer">@color/parking_blue_light</item>
         <item name="colorOnPrimaryContainer">@color/white</item>
 
+        <!-- Colori secondari -->
         <item name="colorSecondary">@color/parking_blue_light</item>
         <item name="colorOnSecondary">@color/white</item>
         <item name="colorSecondaryContainer">@color/parking_blue_light</item>
         <item name="colorOnSecondaryContainer">@color/white</item>
 
+        <!-- Colori terziari -->
         <item name="colorTertiary">@color/parking_blue</item>
         <item name="colorOnTertiary">@color/white</item>
         <item name="colorTertiaryContainer">@color/parking_blue_light</item>
         <item name="colorOnTertiaryContainer">@color/white</item>
 
+        <!-- Colori sistema e UI (status bar e controlli) -->
         <item name="android:colorControlActivated">@color/parking_blue</item>
         <item name="android:colorAccent">@color/parking_blue_light</item>
 
         <item name="android:statusBarColor">@color/parking_blue_dark</item>
 
+        <!-- Colori di supporto e testi secondari -->
         <item name="colorOutline">@color/parking_gray_light</item>
         <item name="android:textColorHint">@color/parking_gray_light</item>
     </style>

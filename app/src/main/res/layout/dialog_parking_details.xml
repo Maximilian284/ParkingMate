@@ -10,6 +10,7 @@
         android:orientation="vertical"
         android:padding="24dp">
 
+        <!-- Titolo dialogo dettagli parcheggio -->
         <TextView
             android:id="@+id/tvDetailTitle"
             android:layout_width="match_parent"
@@ -20,6 +21,7 @@
             android:textColor="?attr/colorPrimary"
             android:layout_marginBottom="16dp" />
 
+        <!-- Informazioni principali parcheggio -->
         <TextView
             android:id="@+id/tvDetailLocation"
             android:layout_width="match_parent"
@@ -52,6 +54,7 @@
             android:textSize="15sp"
             android:layout_marginBottom="12dp" />
 
+        <!-- Note opzionali (visibili solo se presenti) -->
         <TextView
             android:id="@+id/tvDetailNotes"
             android:layout_width="match_parent"
@@ -62,6 +65,7 @@
             android:layout_marginBottom="16dp"
             android:visibility="gone" />
 
+        <!-- Foto del parcheggio (se disponibile) -->
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/ivDetailPhoto"
             android:layout_width="match_parent"

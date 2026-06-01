@@ -19,10 +19,10 @@ class AlarmReceiver : BroadcastReceiver() {
         val isExpiry = intent.getBooleanExtra("IS_EXPIRY", false)
         val parkingId = intent.getIntExtra("PARKING_ID", 0)
 
-        // --- 1. SE È LA SCADENZA, TERMINIAMO IL PARCHEGGIO NEL DATABASE ---
         if (isExpiry && parkingId != 0) {
-            // goAsync() dice ad Android "Aspetta a uccidere questo processo, sto scrivendo nel DB!"
             val pendingResult = goAsync()
+            // Utilizzo di goAsync e Dispatchers.IO per eseguire l'aggiornamento del database in modo asincrono,
+            // evitando il blocco del thread del BroadcastReceiver e prevenendo la terminazione prematura del processo.
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val db = AppDatabase.getDatabase(context)
@@ -33,7 +33,7 @@ class AlarmReceiver : BroadcastReceiver() {
             }
         }
 
-        // --- 2. MOSTRA LA NOTIFICA A SCHERMO ---
+        // Creazione e invio della notifica utente, differenziando contenuto e priorità tra avviso e scadenza.
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "parking_ticket_channel"
 

@@ -20,13 +20,13 @@ object WorkManagerHelper {
 
         val minutes = prefs.getInt("periodic_minutes", 60).toLong()
 
-        // Android WorkManager ha un limite invalicabile: il ciclo minimo è 15 minuti.
+        // WorkManager impone un intervallo minimo di 15 minuti per i task periodici.
         val safeMinutes = if (minutes < 15) 15L else minutes
 
         val workRequest = PeriodicWorkRequestBuilder<HourlyParkingWorker>(safeMinutes, TimeUnit.MINUTES)
             .build()
 
-        // Se esisteva già un lavoro simile, lo AGGIORNA con il nuovo intervallo temporale
+        // Sostituisce eventuale lavoro già schedulato mantenendo un'unica istanza attiva con lo stesso nome.
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WORK_NAME,
             ExistingPeriodicWorkPolicy.UPDATE,

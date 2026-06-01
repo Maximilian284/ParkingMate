@@ -32,7 +32,6 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
 
     private lateinit var adapter: VehicleAdapter
 
-    // I tipi richiesti da te
     private val vehicleTypes = arrayOf("Macchina", "Moto", "Scooter", "Bici", "Monopattino")
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -48,13 +47,13 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
 
         adapter = VehicleAdapter(
             vehicles = emptyList(),
-            // --- 1. CLICK SULLA CARD (Associazione Veicolo -> Luogo) ---
             onItemClick = { vehicle ->
                 val form = AddParkingFragment()
                 val b = Bundle()
                 b.putInt("preselected_vehicle_id", vehicle.id)
                 b.putString("preselected_vehicle_name", "${vehicle.name} (${vehicle.type})")
-                b.putBoolean("is_vehicle_locked", true) // Messaggio per il form: blocca il veicolo!
+                // Indica al form di parcheggio che il veicolo è pre-selezionato e non modificabile dall'utente durante la creazione della sessione.
+                b.putBoolean("is_vehicle_locked", true)
                 form.arguments = b
                 form.show(childFragmentManager, "AddParkingDialog")
             },
@@ -70,10 +69,8 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
     private fun setupToolbar(view: View) {
         val toolbar = view.findViewById<MaterialToolbar>(R.id.topAppBar)
 
-        // 1. FORZIAMO IL CARICAMENTO DELLE ICONE (+ e Filtro)
         toolbar.inflateMenu(R.menu.menu_vehicles)
 
-        // 2. GESTIAMO I CLICK
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_add -> {
@@ -90,9 +87,9 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
     }
 
     private fun observeData() {
+        // Collezione del Flow dei veicoli con lifecycle-aware scope per evitare aggiornamenti quando il Fragment non è in stato STARTED.
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                // Legge i dati dal DB
                 viewModel.vehiclesList.collect { list ->
                     adapter.updateData(list)
                 }
@@ -100,7 +97,6 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
         }
     }
 
-    // --- POPUP AGGIUNGI / MODIFICA ---
     private fun showVehicleDialog(vehicleToEdit: Vehicle?) {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_vehicle, null)
         val etName = dialogView.findViewById<TextInputEditText>(R.id.etVehicleName)
@@ -131,18 +127,15 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
             }
             .setNegativeButton("Annulla", null)
 
-        // 1. Aggiungiamo il tasto ELIMINA nativo in basso a sinistra
         if (vehicleToEdit != null) {
             builder.setNeutralButton("ELIMINA") { _, _ ->
                 viewModel.removeVehicle(vehicleToEdit)
             }
         }
 
-        // Mostriamo il dialog prima di colorare i bottoni
         val dialog = builder.create()
         dialog.show()
 
-        // Coloriamo i bottoni come richiesto: Salva = Blu chiaro, Annulla = Grigio chiaro
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(android.graphics.Color.parseColor("#4A7BC7"))
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
 
@@ -151,13 +144,12 @@ class VehiclesFragment : Fragment(R.layout.fragment_vehicles) {
         }
     }
 
-    // --- POPUP FILTRI ---
     private fun showFilterDialog() {
         val opzioni = arrayOf("Tutti", "Solo Macchine", "Solo Moto", "Ordine Alfabetico (A-Z)")
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Filtra per:")
             .setItems(opzioni) { _, which ->
-                // Qui per ora ordiniamo la lista localmente
+                // Applicazione dei filtri e ordinamenti in memoria sui dati già caricati dal ViewModel, senza query sul database.
                 val listaAttuale = viewModel.vehiclesList.value
                 val listaFiltrata = when (which) {
                     1 -> listaAttuale.filter { it.type == "Macchina" }

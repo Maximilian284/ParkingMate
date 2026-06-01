@@ -6,6 +6,7 @@
     android:orientation="vertical"
     android:fitsSystemWindows="true">
 
+    <!-- Barra superiore con titolo e navigazione -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/topAppBarLocations"
         android:layout_width="match_parent"
@@ -13,6 +14,7 @@
         android:background="?attr/colorPrimaryContainer"
         app:title="Parcheggi" />
 
+    <!-- Lista dei parcheggi salvati -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvLocations"
         android:layout_width="match_parent"

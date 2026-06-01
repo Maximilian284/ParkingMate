@@ -3,6 +3,8 @@ package com.example.parkingmate.data
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
+// Data Access Object principale dell'applicazione.
+// Definisce tutte le operazioni di accesso e modifica dei dati persistiti tramite Room.
 @Dao
 interface AppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -29,14 +31,6 @@ interface AppDao {
     @Query("SELECT * FROM saved_locations")
     fun getAllLocations(): Flow<List<SavedLocation>>
 
-    @Transaction
-    @Query("SELECT * FROM parking_sessions WHERE isActive = 1 ORDER BY startTime DESC")
-    fun getActiveParkings(): Flow<List<SessionWithVehicle>>
-
-    @Transaction
-    @Query("SELECT * FROM parking_sessions WHERE isActive = 0 ORDER BY startTime DESC")
-    fun getHistoryParkings(): Flow<List<SessionWithVehicle>>
-
     @Insert
     suspend fun insertSession(session: ParkingSession): Long
 
@@ -51,6 +45,16 @@ interface AppDao {
 
     @Query("UPDATE parking_sessions SET walkDuration = :duration, walkDistance = :distance WHERE id = :sessionId")
     suspend fun updateWalkEffort(sessionId: Int, duration: Long, distance: Float)
+
+    // Esegue la query e il recupero delle entità correlate all'interno della stessa
+    // transazione, garantendo la consistenza dei dati restituiti da SessionWithVehicle.
+    @Transaction
+    @Query("SELECT * FROM parking_sessions WHERE isActive = 1 ORDER BY startTime DESC")
+    fun getActiveParkings(): Flow<List<SessionWithVehicle>>
+
+    @Transaction
+    @Query("SELECT * FROM parking_sessions WHERE isActive = 0 ORDER BY startTime DESC")
+    fun getHistoryParkings(): Flow<List<SessionWithVehicle>>
 
     @Query("SELECT * FROM parking_sessions WHERE vehicleId = :vId AND isActive = 1")
     suspend fun getActiveParkingsForVehicle(vId: Int): List<ParkingSession>

@@ -15,12 +15,14 @@
         android:padding="16dp"
         android:gravity="center_vertical">
 
+        <!-- Icona luogo salvato -->
         <ImageView
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/local_parking_24px"
             app:tint="?attr/colorPrimary" />
 
+        <!-- Informazioni luogo -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -44,8 +46,7 @@
                 android:textColor="#666666" />
         </LinearLayout>
 
-        <!-- Interruttore rimosso da qui -->
-
+        <!-- Azione modifica luogo -->
         <ImageButton
             android:id="@+id/btnEditLocation"
             android:layout_width="wrap_content"

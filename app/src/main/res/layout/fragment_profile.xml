@@ -24,7 +24,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- SEZIONE 1: TICKET FISSO (Allarmi Esatti) -->
+            <!-- Notifiche scadenza ticket -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -77,7 +77,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- SEZIONE 2: TARIFF ORARIA (Notifiche Periodiche) -->
+            <!-- Promemoria sosta oraria -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -130,7 +130,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- SEZIONE 3: GEOFENCING (Automazione Luoghi) -->
+            <!-- Geofencing e automazione luoghi -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -161,7 +161,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- SEZIONE 4: PARKING EFFORT (Tracciamento Camminata) -->
+            <!-- Tracking camminata e effort score -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

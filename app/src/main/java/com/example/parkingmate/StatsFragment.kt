@@ -75,11 +75,13 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
+                    // Aggregazione reattiva dei dati attivi e storici per mantenere sincronizzata la vista statistica con lo stato del database.
                     viewModel.activeParkings.collect { active ->
                         updateAllParkings(active, viewModel.historyParkings.value)
                     }
                 }
                 launch {
+                    // Sincronizza la componente storica dei parcheggi per aggiornare grafici e mappe in tempo reale.
                     viewModel.historyParkings.collect { history ->
                         updateAllParkings(viewModel.activeParkings.value, history)
                     }
@@ -131,25 +133,24 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
         barChart.setDrawBarShadow(false)
         barChart.animateY(1000)
 
-        // --- SCRITTE BIANCHE E STILE DARK ---
-        barChart.setBackgroundColor(Color.parseColor("#121212")) // Sfondo nero
-        barChart.legend.textColor = Color.WHITE // Legenda bianca
+        barChart.setBackgroundColor(Color.parseColor("#121212"))
+        barChart.legend.textColor = Color.WHITE
         barChart.legend.textSize = 14f
 
         val xAxis = barChart.xAxis
         xAxis.position = XAxis.XAxisPosition.BOTTOM
         xAxis.setDrawGridLines(false)
         xAxis.granularity = 1f
-        xAxis.textColor = Color.WHITE // Testo asse X bianco
+        xAxis.textColor = Color.WHITE
         xAxis.textSize = 12f
 
         val leftAxis = barChart.axisLeft
         leftAxis.axisMinimum = 0f
-        leftAxis.textColor = Color.WHITE // Testo asse Y bianco
+        leftAxis.textColor = Color.WHITE
         leftAxis.textSize = 12f
-        leftAxis.gridColor = Color.DKGRAY // Griglia grigio scuro per non confondere
+        leftAxis.gridColor = Color.DKGRAY
 
-        barChart.axisRight.isEnabled = false // Nascondiamo l'asse di destra
+        barChart.axisRight.isEnabled = false
     }
 
     private fun updateAllParkings(active: List<SessionWithVehicle>, history: List<SessionWithVehicle>) {
@@ -165,7 +166,7 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
         } else {
             barChart.visibility = View.GONE
             mapView.visibility = View.VISIBLE
-            processData() // Ridisegna la mappa in base allo stato 1 o 2
+            processData()
         }
     }
 
@@ -190,10 +191,10 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
     private fun updateEffortMap(list: List<SessionWithVehicle>) {
         val map = googleMap ?: return
 
-        map.clear() // Pulizia sicura
-        heatmapOverlay = null // Dimentica l'overlay distrutto (Evita il crash!)
+        map.clear()
+        heatmapOverlay = null
 
-        // Prendiamo solo i parcheggi in cui l'Effort Score è stato calcolato
+        // Selezione dei soli parcheggi con dati di camminata validi per la costruzione della mappa di sforzo.
         val scoredParkings = list.filter { it.session.walkDistance != null && it.session.walkDistance > 0 }
 
         for (item in scoredParkings) {
@@ -232,6 +233,7 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
             val session = item.session
             val type = item.vehicle.type
 
+            // Calcolo del costo cumulativo per categoria di veicolo con gestione delle tariffe orarie e limiti massimi.
             var finalCost = 0.0
             if (session.type == "All'ora" || session.type == "Hourly") {
                 val endTime = session.endTime ?: System.currentTimeMillis()
@@ -263,7 +265,7 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
 
         val dataSet = BarDataSet(entries, "Totale Speso (€)")
         dataSet.colors = ColorTemplate.MATERIAL_COLORS.toList()
-        dataSet.valueTextColor = Color.WHITE // Valori sopra le colonne in bianco
+        dataSet.valueTextColor = Color.WHITE
         dataSet.valueTextSize = 14f
 
         val barData = BarData(dataSet)
@@ -277,9 +279,10 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
     private fun updateHeatMap(list: List<SessionWithVehicle>) {
         val map = googleMap ?: return
 
-        map.clear() // Pulizia sicura
-        heatmapOverlay = null // Dimentica l'overlay distrutto (Evita il crash!)
+        map.clear()
+        heatmapOverlay = null
 
+        // Conversione delle sessioni in punti geografici per la generazione della heatmap.
         val latLngs = list.map { LatLng(it.session.latitude, it.session.longitude) }
 
         if (latLngs.isNotEmpty()) {

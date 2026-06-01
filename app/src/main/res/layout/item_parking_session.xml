@@ -20,7 +20,7 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <!-- Icona fissa -->
+            <!-- Icona parcheggio -->
             <ImageView
                 android:layout_width="40dp"
                 android:layout_height="40dp"
@@ -34,7 +34,7 @@
                 android:layout_marginStart="16dp"
                 android:orientation="vertical">
 
-                <!-- Nome Sessione (Titolo) -->
+                <!-- Informazioni sosta -->
                 <TextView
                     android:id="@+id/tvDetailTitle"
                     android:layout_width="wrap_content"
@@ -44,7 +44,6 @@
                     android:textStyle="bold"
                     android:textColor="?attr/colorPrimary" />
 
-                <!-- Nome Veicolo -->
                 <TextView
                     android:id="@+id/tvParkingVehicle"
                     android:layout_width="wrap_content"
@@ -53,7 +52,6 @@
                     android:textSize="14sp"
                     android:textStyle="normal" />
 
-                <!-- Tipo Tariffa -->
                 <TextView
                     android:id="@+id/tvParkingType"
                     android:layout_width="wrap_content"
@@ -62,7 +60,7 @@
                     android:textColor="#888888" />
             </LinearLayout>
 
-            <!-- TASTO ELIMINA (Cestino) in alto a destra -->
+            <!-- Azione elimina sosta -->
             <ImageButton
                 android:id="@+id/btnDeleteParking"
                 android:layout_width="48dp"
@@ -70,11 +68,11 @@
                 android:src="@android:drawable/ic_menu_delete"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 app:tint="#D32F2F"
-                android:visibility="gone" /> <!-- Nascosto di default -->
+                android:visibility="gone" />
 
         </LinearLayout>
 
-        <!-- Orari e Date -->
+        <!-- Orari sosta -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -98,7 +96,7 @@
                 android:textStyle="italic" />
         </LinearLayout>
 
-        <!-- Bottone Termina Sosta (Rosso per farsi notare) -->
+        <!-- Azioni sosta -->
         <Button
             android:id="@+id/btnEndParking"
             style="@style/Widget.Material3.Button"

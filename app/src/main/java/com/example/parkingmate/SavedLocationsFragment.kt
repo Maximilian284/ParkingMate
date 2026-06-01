@@ -65,7 +65,7 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                 b.putDouble("cost", location.defaultCost)
                 b.putDouble("initialCost", location.initialCost)
                 b.putDouble("maxCost", location.maxCost)
-                b.putString("photoPath", location.photoPath) // <-- FIX SALVA DATI!
+                b.putString("photoPath", location.photoPath)
                 b.putBoolean("is_location_locked", true)
                 form.arguments = b
                 form.show(childFragmentManager, "AddParkingDialog")
@@ -82,7 +82,7 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
                 b.putDouble("cost", location.defaultCost)
                 b.putDouble("initialCost", location.initialCost)
                 b.putDouble("maxCost", location.maxCost)
-                b.putString("photoPath", location.photoPath) // <-- FIX SALVA DATI!
+                b.putString("photoPath", location.photoPath)
                 b.putBoolean("is_geofence_enabled", location.isGeofenceEnabled)
                 b.putBoolean("is_edit_mode", true)
                 form.arguments = b
@@ -92,6 +92,7 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
         rv.layoutManager = LinearLayoutManager(requireContext())
         rv.adapter = adapter
 
+        // Collezione del Flow dei luoghi salvati con lifecycle-aware collection per evitare leak e aggiornamenti fuori dallo stato STARTED.
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.savedLocationsList.collect { list ->
@@ -116,6 +117,7 @@ class SavedLocationsFragment : Fragment(R.layout.fragment_saved_locations) {
             .show()
     }
 
+    // Applica il filtro corrente sui dati in memoria; include una regola di mapping tra tipi tariffa per compatibilità dei dati storici.
     private fun applyFilter() {
         val filteredList = if (currentFilter == "Tutte") {
             allLocations

@@ -26,7 +26,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- 1. TOGGLE AZIONE -->
+            <!-- Modalità parcheggio -->
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/toggleGroupAction"
                 android:layout_width="match_parent"
@@ -58,7 +58,7 @@
                     android:text="Parcheggia Veicolo" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
-            <!-- 2. NOME / SELEZIONE LUOGO -->
+            <!-- Selezione o nome posizione -->
             <TextView
                 android:id="@+id/tvDisplayLocationName"
                 android:layout_width="match_parent"
@@ -122,7 +122,7 @@
                     android:layout_marginStart="8dp" />
             </LinearLayout>
 
-            <!-- INTERRUTTORE GEOFENCE LOCALE -->
+            <!-- Geofence locale (notifiche area) -->
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/switchLocalGeofence"
                 android:layout_width="match_parent"
@@ -135,7 +135,7 @@
                 app:thumbTint="@color/switch_thumb"
                 app:trackTint="@color/switch_track"/>
 
-            <!-- 3. TIPO DI TARIFFA E COSTI -->
+            <!-- Tipo tariffa parcheggio -->
             <TextView
                 android:id="@+id/tvDisplayParkingType"
                 android:layout_width="match_parent"
@@ -164,6 +164,7 @@
                     android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Costi orari -->
             <LinearLayout
                 android:id="@+id/layoutHourlyCosts"
                 android:layout_width="match_parent"
@@ -222,6 +223,7 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
+            <!-- Costi fissi -->
             <LinearLayout
                 android:id="@+id/layoutFixedCosts"
                 android:layout_width="match_parent"
@@ -260,7 +262,7 @@
                     app:icon="@android:drawable/ic_menu_recent_history" />
             </LinearLayout>
 
-            <!-- 4. SELEZIONE VEICOLO -->
+            <!-- Selezione veicolo -->
             <TextView
                 android:id="@+id/tvDisplayVehicle"
                 android:layout_width="match_parent"
@@ -298,7 +300,7 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- 5. MAPPA -->
+            <!-- Mappa e strumenti -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardMap"
                 android:layout_width="match_parent"
@@ -316,13 +318,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />
 
-                    <!-- SCUDO TRASPARENTE -->
                     <View
                         android:id="@+id/mapTransparentOverlay"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />
 
-                    <!-- Ricerca e Ingrandisci -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -367,7 +367,7 @@
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 6. NOTE E FOTO -->
+            <!-- Note e foto -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilNotes"
                 android:layout_width="match_parent"
@@ -385,7 +385,7 @@
                     android:lines="3" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- DUE BOTTONI AFFIANCATI E COLORATI -->
+            <!-- Gestione foto -->
             <LinearLayout
                 android:id="@+id/layoutPhotoButtons"
                 android:layout_width="match_parent"
@@ -421,7 +421,6 @@
                     app:icon="@android:drawable/ic_menu_camera" />
             </LinearLayout>
 
-            <!-- ANTEPRIMA DELLA FOTO NON RITAGLIATA -->
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/ivPhotoPreview"
                 android:layout_width="match_parent"
@@ -437,6 +436,7 @@
         </LinearLayout>
     </ScrollView>
 
+    <!-- Azioni finali -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

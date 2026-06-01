@@ -30,7 +30,6 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
 
-        // --- FIX ORIZZONTALE: Usiamo NavigationBarView che va bene sia per la barra in basso che per quella laterale! ---
         val navView = findViewById<NavigationBarView>(R.id.bottom_navigation)
         NavigationUI.setupWithNavController(navView, navController)
 
@@ -43,6 +42,7 @@ class MainActivity : AppCompatActivity() {
         permissionsToAsk.add(android.Manifest.permission.ACCESS_FINE_LOCATION)
         permissionsToAsk.add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permissionsToAsk.add(android.Manifest.permission.POST_NOTIFICATIONS)
+        // Permesso richiesto solo da Android Q in poi per l'accesso ai dati di attività fisica dell'utente.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) permissionsToAsk.add(android.Manifest.permission.ACTIVITY_RECOGNITION)
 
         val missingPermissions = permissionsToAsk.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }

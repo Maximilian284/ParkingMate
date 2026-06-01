@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <!-- Icona Filtro -->
+    <!-- Filtri veicoli -->
     <item
         android:id="@+id/action_filter"
         android:icon="@drawable/filter_alt_24px"
         android:title="Filtra"
         app:showAsAction="ifRoom" />
-    <!-- Icona Più -->
+    <!-- Aggiunta veicolo -->
     <item
         android:id="@+id/action_add"
         android:icon="@drawable/add_24px"

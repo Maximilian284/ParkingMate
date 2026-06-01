@@ -20,11 +20,9 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
     private lateinit var prefs: SharedPreferences
 
-    // Salviamo i bottoni a livello di classe così l'app li trova sempre
     private var switchGeofencing: MaterialSwitch? = null
     private var switchEffort: MaterialSwitch? = null
 
-    // Launchers: si limitano a risvegliare la schermata, il controllo vero lo fa onResume!
     private val effortPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         checkPermissionsAndFixSwitches()
     }
@@ -49,7 +47,6 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         switchGeofencing = view.findViewById(R.id.switchGeofencing)
         switchEffort = view.findViewById(R.id.switchEffort)
 
-        // Valori di default
         val isFixedEnabled = prefs.getBoolean("fixed_enabled", true)
         val fixedMinutes = prefs.getInt("fixed_minutes", 15)
 
@@ -69,7 +66,6 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         switchGeofencing?.isChecked = prefs.getBoolean("geofence_global_enabled", false)
         switchEffort?.isChecked = prefs.getBoolean("effort_global_enabled", false)
 
-        // --- EVENTI CLICK STANDARD ---
         switchFixedTicket.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("fixed_enabled", isChecked).apply()
             layoutFixedSettings.alpha = if (isChecked) 1.0f else 0.5f
@@ -117,12 +113,12 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         }
     }
 
-    // Viene chiamato automaticamente da Android appena si chiude il popup dei permessi
     override fun onResume() {
         super.onResume()
         checkPermissionsAndFixSwitches()
     }
 
+// Gestisce la logica di abilitazione dei feature switch e la richiesta dei permessi necessari in base alla versione Android e allo stato attuale.
     private fun setupSpecialSwitchesListeners() {
         switchGeofencing?.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("geofence_global_enabled", isChecked).apply()
@@ -147,11 +143,10 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         }
     }
 
-    // IL MOTORE INFALLIBILE: Controlla la realtà dei fatti
+// Mantiene coerenza tra stato UI e permessi runtime, disattivando automaticamente funzionalità non supportate o non autorizzate.
     private fun checkPermissionsAndFixSwitches() {
         val context = context ?: return
 
-        // 1. Controllo Effort Score
         val isEffortOn = prefs.getBoolean("effort_global_enabled", false)
         if (isEffortOn) {
             val hasLoc = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -162,7 +157,6 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
             }
         }
 
-        // 2. Controllo Geofencing
         val isGeofenceOn = prefs.getBoolean("geofence_global_enabled", false)
         if (isGeofenceOn && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val hasBgLoc = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -172,16 +166,14 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         }
     }
 
+// Disattiva forzatamente una funzionalità quando i permessi richiesti non sono disponibili, riallineando UI, preferenze e stato interno senza generare loop di listener.
     private fun forceSwitchOff(switchView: MaterialSwitch?, prefKey: String, message: String) {
-        // Evitiamo di mandare Toast continui se è già spento
         if (switchView?.isChecked == false && !prefs.getBoolean(prefKey, false)) return
 
         Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
 
-        // Salviamo lo stato spento
         prefs.edit().putBoolean(prefKey, false).apply()
 
-        // Sganciamo il listener, spegniamo graficamente e lo riattacchiamo
         switchView?.setOnCheckedChangeListener(null)
         switchView?.isChecked = false
         setupSpecialSwitchesListeners()

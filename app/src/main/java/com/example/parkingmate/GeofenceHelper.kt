@@ -12,9 +12,10 @@ import com.google.android.gms.location.LocationServices
 
 object GeofenceHelper {
 
-    // Raggio del recinto in metri (150 metri è la misura consigliata da Google per l'accuratezza)
     private const val RADIUS_IN_METERS = 150f
 
+    // Il PendingIntent deve essere stabile e riutilizzabile affinché il sistema di geofencing
+    // possa identificarlo come riferimento unico per eventi di ingresso e uscita.
     private fun getPendingIntent(context: Context): PendingIntent {
         val intent = Intent(context, GeofenceReceiver::class.java)
         return PendingIntent.getBroadcast(
@@ -32,7 +33,8 @@ object GeofenceHelper {
             .build()
 
         val request = GeofencingRequest.Builder()
-            .setInitialTrigger(0) // <--- FIX 1: NIENTE NOTIFICA QUANDO ATTIVI L'INTERRUTTORE!
+            // Evita la generazione di eventi immediati al momento della registrazione del geofence.
+            .setInitialTrigger(0)
             .addGeofence(geofence)
             .build()
 
@@ -46,6 +48,7 @@ object GeofenceHelper {
             }
     }
 
+    // Rimuove il geofence utilizzando l'identificativo della posizione associata.
     fun removeGeofence(context: Context, locationId: Int) {
         val client = LocationServices.getGeofencingClient(context)
         client.removeGeofences(listOf(locationId.toString()))

@@ -28,13 +28,12 @@ class GeofenceReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
 
-        // --- 1. GESTIONE: L'UTENTE HA PARCHEGGIATO (È FERMO O STA CAMMINANDO) ---
+        // Gestione degli eventi di activity recognition per rilevare l'arresto dell'utente dopo il parcheggio.
         if (intent.action == "WAIT_FOR_STOP") {
             if (ActivityTransitionResult.hasResult(intent)) {
                 val result = ActivityTransitionResult.extractResult(intent)
                 for (event in result!!.transitionEvents) {
 
-                    // FIX: Ora accettiamo non solo che sia FERMO, ma anche che stia CAMMINANDO!
                     if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER &&
                         (event.activityType == DetectedActivity.STILL ||
                                 event.activityType == DetectedActivity.WALKING ||
@@ -50,7 +49,6 @@ class GeofenceReceiver : BroadcastReceiver() {
                             sendEnterNotification(context, locId, name, lat, lng, type)
                         }
 
-                        // Spegniamo l'ascolto dei sensori per risparmiare batteria
                         val pi = PendingIntent.getBroadcast(context, 100, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
                         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
                             ActivityRecognition.getClient(context).removeActivityTransitionUpdates(pi)
@@ -61,7 +59,6 @@ class GeofenceReceiver : BroadcastReceiver() {
             return
         }
 
-        // --- 2. GESTIONE INGRESSO/USCITA DAL RECINTO ---
         val geofencingEvent = GeofencingEvent.fromIntent(intent)
         if (geofencingEvent == null || geofencingEvent.hasError()) return
 
@@ -77,6 +74,7 @@ class GeofenceReceiver : BroadcastReceiver() {
             -1f
         }
 
+        // Mantiene vivo il BroadcastReceiver durante operazioni asincrone su database e rete.
         val pendingResult = goAsync()
 
         CoroutineScope(Dispatchers.IO).launch {
@@ -86,20 +84,18 @@ class GeofenceReceiver : BroadcastReceiver() {
 
                 if (location != null) {
                     if (transition == Geofence.GEOFENCE_TRANSITION_ENTER) {
-                        // Se entri veloce o a velocità incerta, ci mettiamo in ascolto dei tuoi prossimi passi
                         if (speed > 2.5f || speed == -1f) {
                             registerForStopEvent(context, location)
                         }
                     }
+                    // Pulizia degli aggiornamenti di activity recognition quando l'utente esce dall'area geofence.
                     else if (transition == Geofence.GEOFENCE_TRANSITION_EXIT) {
-                        // Disattiviamo l'attesa se ne usciamo
                         val stopIntent = Intent(context, GeofenceReceiver::class.java).apply { action = "WAIT_FOR_STOP" }
                         val stopPi = PendingIntent.getBroadcast(context, 100, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
                         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
                             ActivityRecognition.getClient(context).removeActivityTransitionUpdates(stopPi)
                         }
 
-                        // Manda la notifica di uscita solo se vai a velocità da auto
                         if (speed > 2.5f || speed == -1f) {
                             val activeParkings = db.appDao().getActiveParkings().first()
                             val activeSession = activeParkings.find {
@@ -118,11 +114,11 @@ class GeofenceReceiver : BroadcastReceiver() {
         }
     }
 
+    // Attiva il monitoraggio dei movimenti per rilevare quando l'utente si ferma dopo l'ingresso nel geofence.
     private fun registerForStopEvent(context: Context, location: com.example.parkingmate.data.SavedLocation) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) return
 
         val transitions = mutableListOf<ActivityTransition>()
-        // Ascoltiamo 3 eventi: Fermo, in Camminata o A Piedi.
         transitions.add(ActivityTransition.Builder()
             .setActivityType(DetectedActivity.STILL)
             .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
@@ -182,6 +178,7 @@ class GeofenceReceiver : BroadcastReceiver() {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "geofence_channel"
 
+        // Creazione del notification channel (richiesto da Android O in poi, operazione idempotente).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(channelId, "Avvisi Luoghi Salvati", NotificationManager.IMPORTANCE_HIGH)
             notificationManager.createNotificationChannel(channel)

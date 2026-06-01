@@ -7,6 +7,6 @@ import androidx.room.PrimaryKey
 data class Vehicle(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val type: String, // "Car", "Motorcycle", "Bicycle"
+    val type: String,
     val isParked: Boolean = false
 )

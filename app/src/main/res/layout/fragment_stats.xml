@@ -3,14 +3,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#121212"> <!-- Sfondo Nero Elegante -->
+    android:background="#121212">
 
-    <!-- CONTENITORE FULL SCREEN -->
+    <!-- Contenitore principale delle viste statistiche -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- STATO 1: IL GRAFICO A BARRE -->
+        <!-- Grafico a barre: statistiche costi e utilizzo -->
         <com.github.mikephil.charting.charts.BarChart
             android:id="@+id/barChartStats"
             android:layout_width="match_parent"
@@ -18,7 +18,7 @@
             android:layout_marginTop="80dp"
             android:layout_marginBottom="20dp"/>
 
-        <!-- STATO 2: LA MAPPA TERMICA FULL SCREEN -->
+        <!-- Mappa termica: distribuzione geografica dei parcheggi -->
         <com.google.android.gms.maps.MapView
             android:id="@+id/mapViewStats"
             android:layout_width="match_parent"
@@ -27,7 +27,7 @@
 
     </FrameLayout>
 
-    <!-- BOTTONI FLUTTUANTI (Sostituiscono i 3 punti) -->
+    <!-- Controlli di visualizzazione e filtro -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
